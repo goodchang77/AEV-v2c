@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(cat:*)",
+      "Bash(python verify_env.py:*)",
+      "Bash(timeout 10 python:*)",
+      "Bash(chmod:*)",
+      "Bash(./diagnose.sh:*)",
+      "Bash(systemctl status:*)",
+      "Bash(service postgresql status:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

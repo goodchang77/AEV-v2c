@@ -1,0 +1,500 @@
+{
+  "test_info": {
+    "test_date": "2025-09-02T09:41:25.487975",
+    "total_companies": 20,
+    "test_companies": {
+      "2330": {
+        "name": "台積電",
+        "industry": "半導體",
+        "sector": "科技"
+      },
+      "2454": {
+        "name": "聯發科",
+        "industry": "半導體",
+        "sector": "科技"
+      },
+      "3034": {
+        "name": "聯詠",
+        "industry": "半導體",
+        "sector": "科技"
+      },
+      "2317": {
+        "name": "鴻海",
+        "industry": "電子製造",
+        "sector": "科技"
+      },
+      "2382": {
+        "name": "廣達",
+        "industry": "電子製造",
+        "sector": "科技"
+      },
+      "2882": {
+        "name": "國泰金",
+        "industry": "金融保險",
+        "sector": "金融"
+      },
+      "2891": {
+        "name": "中信金",
+        "industry": "金融保險",
+        "sector": "金融"
+      },
+      "2892": {
+        "name": "第一金",
+        "industry": "金融保險",
+        "sector": "金融"
+      },
+      "1301": {
+        "name": "台塑",
+        "industry": "石化工業",
+        "sector": "傳統製造"
+      },
+      "1303": {
+        "name": "南亞",
+        "industry": "石化工業",
+        "sector": "傳統製造"
+      },
+      "2002": {
+        "name": "中鋼",
+        "industry": "鋼鐵工業",
+        "sector": "傳統製造"
+      },
+      "1216": {
+        "name": "統一",
+        "industry": "食品工業",
+        "sector": "民生消費"
+      },
+      "1227": {
+        "name": "佳格",
+        "industry": "食品工業",
+        "sector": "民生消費"
+      },
+      "2912": {
+        "name": "統一超",
+        "industry": "零售業",
+        "sector": "民生消費"
+      },
+      "2915": {
+        "name": "潤泰全",
+        "industry": "零售業",
+        "sector": "民生消費"
+      },
+      "3045": {
+        "name": "台灣大",
+        "industry": "電信業",
+        "sector": "電信"
+      },
+      "4904": {
+        "name": "遠傳",
+        "industry": "電信業",
+        "sector": "電信"
+      },
+      "5880": {
+        "name": "合庫金",
+        "industry": "金融業",
+        "sector": "金融"
+      },
+      "2886": {
+        "name": "兆豐金",
+        "industry": "金融業",
+        "sector": "金融"
+      },
+      "2603": {
+        "name": "長榮",
+        "industry": "海運業",
+        "sector": "航運"
+      }
+    }
+  },
+  "results": [
+    {
+      "symbol": "2330",
+      "company_name": "台積電",
+      "industry": "半導體",
+      "sector": "科技",
+      "success": true,
+      "stock_data": {
+        "current_price": 1165.0,
+        "change": 5.0,
+        "change_percent": 0.43103448275862066,
+        "volume": 23022319,
+        "turnover": 26647241918.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458729"
+    },
+    {
+      "symbol": "2454",
+      "company_name": "聯發科",
+      "industry": "半導體",
+      "sector": "科技",
+      "success": true,
+      "stock_data": {
+        "current_price": 1360.0,
+        "change": -10.0,
+        "change_percent": -0.7299270072992701,
+        "volume": 3937354,
+        "turnover": 5364125515.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458766"
+    },
+    {
+      "symbol": "3034",
+      "company_name": "聯詠",
+      "industry": "半導體",
+      "sector": "科技",
+      "success": true,
+      "stock_data": {
+        "current_price": 428.0,
+        "change": -7.0,
+        "change_percent": -1.6091954022988506,
+        "volume": 1049283,
+        "turnover": 450878989.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458775"
+    },
+    {
+      "symbol": "2317",
+      "company_name": "鴻海",
+      "industry": "電子製造",
+      "sector": "科技",
+      "success": true,
+      "stock_data": {
+        "current_price": 198.5,
+        "change": -5.0,
+        "change_percent": -2.457002457002457,
+        "volume": 70459817,
+        "turnover": 14078205621.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458782"
+    },
+    {
+      "symbol": "2382",
+      "company_name": "廣達",
+      "industry": "電子製造",
+      "sector": "科技",
+      "success": true,
+      "stock_data": {
+        "current_price": 256.0,
+        "change": -6.5,
+        "change_percent": -2.4761904761904763,
+        "volume": 19560706,
+        "turnover": 5040730234.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458788"
+    },
+    {
+      "symbol": "2882",
+      "company_name": "國泰金",
+      "industry": "金融保險",
+      "sector": "金融",
+      "success": true,
+      "stock_data": {
+        "current_price": 62.6,
+        "change": 1.1,
+        "change_percent": 1.788617886178862,
+        "volume": 15356313,
+        "turnover": 957816506.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458793"
+    },
+    {
+      "symbol": "2891",
+      "company_name": "中信金",
+      "industry": "金融保險",
+      "sector": "金融",
+      "success": true,
+      "stock_data": {
+        "current_price": 41.4,
+        "change": 0.25,
+        "change_percent": 0.6075334143377886,
+        "volume": 31904632,
+        "turnover": 1320874133.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458797"
+    },
+    {
+      "symbol": "2892",
+      "company_name": "第一金",
+      "industry": "金融保險",
+      "sector": "金融",
+      "success": true,
+      "stock_data": {
+        "current_price": 28.5,
+        "change": 0.15,
+        "change_percent": 0.5291005291005291,
+        "volume": 8848318,
+        "turnover": 251661255.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458802"
+    },
+    {
+      "symbol": "1301",
+      "company_name": "台塑",
+      "industry": "石化工業",
+      "sector": "傳統製造",
+      "success": true,
+      "stock_data": {
+        "current_price": 38.8,
+        "change": -0.15,
+        "change_percent": -0.38510911424903727,
+        "volume": 17819658,
+        "turnover": 686785637.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458806"
+    },
+    {
+      "symbol": "1303",
+      "company_name": "南亞",
+      "industry": "石化工業",
+      "sector": "傳統製造",
+      "success": true,
+      "stock_data": {
+        "current_price": 42.5,
+        "change": -0.7,
+        "change_percent": -1.6203703703703702,
+        "volume": 70820250,
+        "turnover": 2998281403.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458811"
+    },
+    {
+      "symbol": "2002",
+      "company_name": "中鋼",
+      "industry": "鋼鐵工業",
+      "sector": "傳統製造",
+      "success": true,
+      "stock_data": {
+        "current_price": 19.95,
+        "change": -0.15,
+        "change_percent": -0.746268656716418,
+        "volume": 25581160,
+        "turnover": 510036249.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458815"
+    },
+    {
+      "symbol": "1216",
+      "company_name": "統一",
+      "industry": "食品工業",
+      "sector": "民生消費",
+      "success": true,
+      "stock_data": {
+        "current_price": 77.4,
+        "change": 0.0,
+        "change_percent": null,
+        "volume": 3943425,
+        "turnover": 305944540.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458819"
+    },
+    {
+      "symbol": "1227",
+      "company_name": "佳格",
+      "industry": "食品工業",
+      "sector": "民生消費",
+      "success": true,
+      "stock_data": {
+        "current_price": 30.1,
+        "change": -0.05,
+        "change_percent": -0.16583747927031509,
+        "volume": 448171,
+        "turnover": 13492136.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458824"
+    },
+    {
+      "symbol": "2912",
+      "company_name": "統一超",
+      "industry": "零售業",
+      "sector": "民生消費",
+      "success": true,
+      "stock_data": {
+        "current_price": 251.5,
+        "change": -3.0,
+        "change_percent": -1.1787819253438114,
+        "volume": 621491,
+        "turnover": 156485480.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458828"
+    },
+    {
+      "symbol": "2915",
+      "company_name": "潤泰全",
+      "industry": "零售業",
+      "sector": "民生消費",
+      "success": true,
+      "stock_data": {
+        "current_price": 53.1,
+        "change": -1.0,
+        "change_percent": -1.8484288354898335,
+        "volume": 1578439,
+        "turnover": 84350338.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458832"
+    },
+    {
+      "symbol": "3045",
+      "company_name": "台灣大",
+      "industry": "電信業",
+      "sector": "電信",
+      "success": true,
+      "stock_data": {
+        "current_price": 106.5,
+        "change": 0.0,
+        "change_percent": null,
+        "volume": 3301607,
+        "turnover": 351128756.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458836"
+    },
+    {
+      "symbol": "4904",
+      "company_name": "遠傳",
+      "industry": "電信業",
+      "sector": "電信",
+      "success": true,
+      "stock_data": {
+        "current_price": 84.3,
+        "change": 0.1,
+        "change_percent": 0.11876484560570072,
+        "volume": 2762198,
+        "turnover": 232614489.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458884"
+    },
+    {
+      "symbol": "5880",
+      "company_name": "合庫金",
+      "industry": "金融業",
+      "sector": "金融",
+      "success": true,
+      "stock_data": {
+        "current_price": 23.8,
+        "change": 0.1,
+        "change_percent": 0.42194092827004226,
+        "volume": 5865029,
+        "turnover": 139825089.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458896"
+    },
+    {
+      "symbol": "2886",
+      "company_name": "兆豐金",
+      "industry": "金融業",
+      "sector": "金融",
+      "success": true,
+      "stock_data": {
+        "current_price": 40.8,
+        "change": 0.75,
+        "change_percent": 1.8726591760299627,
+        "volume": 18431876,
+        "turnover": 752791446.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458902"
+    },
+    {
+      "symbol": "2603",
+      "company_name": "長榮",
+      "industry": "海運業",
+      "sector": "航運",
+      "success": true,
+      "stock_data": {
+        "current_price": 184.0,
+        "change": -1.5,
+        "change_percent": -0.8086253369272237,
+        "volume": 10352716,
+        "turnover": 1919354210.0
+      },
+      "error": "",
+      "timestamp": "2025-09-02T09:41:25.458906"
+    }
+  ],
+  "statistics": {
+    "industry_stats": {
+      "半導體": {
+        "total": 3,
+        "success": 3
+      },
+      "電子製造": {
+        "total": 2,
+        "success": 2
+      },
+      "金融保險": {
+        "total": 3,
+        "success": 3
+      },
+      "石化工業": {
+        "total": 2,
+        "success": 2
+      },
+      "鋼鐵工業": {
+        "total": 1,
+        "success": 1
+      },
+      "食品工業": {
+        "total": 2,
+        "success": 2
+      },
+      "零售業": {
+        "total": 2,
+        "success": 2
+      },
+      "電信業": {
+        "total": 2,
+        "success": 2
+      },
+      "金融業": {
+        "total": 2,
+        "success": 2
+      },
+      "海運業": {
+        "total": 1,
+        "success": 1
+      }
+    },
+    "sector_stats": {
+      "科技": {
+        "total": 5,
+        "success": 5
+      },
+      "金融": {
+        "total": 5,
+        "success": 5
+      },
+      "傳統製造": {
+        "total": 3,
+        "success": 3
+      },
+      "民生消費": {
+        "total": 4,
+        "success": 4
+      },
+      "電信": {
+        "total": 2,
+        "success": 2
+      },
+      "航運": {
+        "total": 1,
+        "success": 1
+      }
+    }
+  }
+}

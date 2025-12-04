@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>財務報表PDF上傳測試</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        
+        input[type="file"] {
+            padding: 5px;
+        }
+        
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .test-button {
+            background: #28a745;
+        }
+        
+        .test-button:hover {
+            background: #218838;
+        }
+        
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s ease;
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .financial-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-name {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .metric-value {
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        .validation-results {
+            margin-top: 15px;
+        }
+        
+        .warning {
+            color: #856404;
+            background: #fff3cd;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        
+        .error-msg {
+            color: #721c24;
+            background: #f8d7da;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 財務報表PDF上傳測試</h1>
+        
+        <div class="upload-section">
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="file">選擇財務報表PDF文件：</label>
+                    <input type="file" id="file" name="file" accept=".pdf" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyId">公司代碼 (可選)：</label>
+                    <input type="text" id="companyId" name="company_id" placeholder="例如：2330" pattern="^\d{4}$">
+                </div>
+                
+                <div class="form-group">
+                    <label for="reportPeriod">報告期間 (可選)：</label>
+                    <input type="text" id="reportPeriod" name="report_period" placeholder="例如：2024Q1" pattern="^20\d{2}Q[1-4]$">
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="asyncProcessing" name="async_processing">
+                        <label for="asyncProcessing">異步處理（適合大文件）</label>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button type="submit" id="uploadBtn">📤 上傳並處理</button>
+                    <button type="button" id="testBtn" class="test-button">🧪 測試提取</button>
+                    <button type="button" id="statusBtn" style="background: #6c757d;" disabled>📋 查詢狀態</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>處理中，請稍候...</div>
+        </div>
+        
+        <div id="progress" style="display: none;">
+            <h3>處理進度</h3>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div id="progressText">準備中...</div>
+        </div>
+        
+        <div id="statusMessage"></div>
+        
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1/documents';
+        let currentDocumentId = null;
+        let statusCheckInterval = null;
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await uploadFile(false);
+        });
+
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            await uploadFile(true);
+        });
+
+        document.getElementById('statusBtn').addEventListener('click', async () => {
+            if (currentDocumentId) {
+                await checkStatus(currentDocumentId);
+            }
+        });
+
+        async function uploadFile(isTest = false) {
+            const fileInput = document.getElementById('file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('請選擇要上傳的PDF文件', 'error');
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showStatus('僅支援PDF格式文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            if (!isTest) {
+                const companyId = document.getElementById('companyId').value;
+                const reportPeriod = document.getElementById('reportPeriod').value;
+                const asyncProcessing = document.getElementById('asyncProcessing').checked;
+                
+                if (companyId) formData.append('company_id', companyId);
+                if (reportPeriod) formData.append('report_period', reportPeriod);
+                formData.append('async_processing', asyncProcessing);
+            }
+
+            const endpoint = isTest ? '/test-extraction' : '/upload/financial-statement';
+            
+            showLoading(true);
+            clearResults();
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || `HTTP ${response.status}`);
+                }
+
+                if (isTest) {
+                    handleTestResult(result);
+                } else {
+                    handleUploadResult(result);
+                }
+
+            } catch (error) {
+                showStatus(`${isTest ? '測試' : '上傳'}失敗: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function handleTestResult(result) {
+            if (result.success) {
+                showStatus('測試提取完成', 'success');
+                displayTestPreview(result.preview);
+            } else {
+                showStatus(`測試失敗: ${result.message}`, 'error');
+            }
+        }
+
+        function handleUploadResult(result) {
+            if (result.success) {
+                currentDocumentId = result.document_id;
+                
+                if (result.document_id && !result.financial_data) {
+                    // 異步處理模式
+                    showStatus('文件上傳成功，開始背景處理...', 'info');
+                    document.getElementById('statusBtn').disabled = false;
+                    startStatusChecking(result.document_id);
+                } else {
+                    // 同步處理模式
+                    showStatus('文件處理完成', 'success');
+                    displayResults(result);
+                }
+            } else {
+                showStatus(`上傳失敗: ${result.message}`, 'error');
+            }
+        }
+
+        function startStatusChecking(documentId) {
+            showProgress(0, '開始處理...');
+            
+            statusCheckInterval = setInterval(async () => {
+                await checkStatus(documentId);
+            }, 2000);
+        }
+
+        async function checkStatus(documentId) {
+            try {
+                const response = await fetch(`${API_BASE}/processing-status/${documentId}`);
+                const status = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(status.detail || `HTTP ${response.status}`);
+                }
+
+                showProgress(status.progress, status.message || '處理中...');
+
+                if (status.status === 'completed') {
+                    clearInterval(statusCheckInterval);
+                    showStatus('處理完成', 'success');
+                    displayAsyncResults(status.results);
+                    hideProgress();
+                } else if (status.status === 'failed') {
+                    clearInterval(statusCheckInterval);
+                    showStatus(`處理失敗: ${status.message}`, 'error');
+                    hideProgress();
+                }
+
+            } catch (error) {
+                clearInterval(statusCheckInterval);
+                showStatus(`狀態查詢失敗: ${error.message}`, 'error');
+                hideProgress();
+            }
+        }
+
+        function displayTestPreview(preview) {
+            if (!preview) return;
+
+            const html = `
+                <div class="financial-data">
+                    <h3>📋 測試提取結果</h3>
+                    <div class="metric">
+                        <span class="metric-name">檔案名稱：</span>
+                        <span class="metric-value">${preview.filename}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-name">檔案大小：</span>
+                        <span class="metric-value">${formatFileSize(preview.file_size)}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-name">處理狀態：</span>
+                        <span class="metric-value">${preview.status}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-name">找到的財務指標：</span>
+                        <span class="metric-value">${preview.financial_metrics_found} 個</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-name">提取方法：</span>
+                        <span class="metric-value">${preview.extraction_methods.join(', ')}</span>
+                    </div>
+                    ${preview.sample_data ? displaySampleData(preview.sample_data) : ''}
+                </div>
+            `;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+
+        function displayResults(result) {
+            displayFinancialData(result.financial_data);
+            
+            if (result.validation_results) {
+                displayValidationResults(result.validation_results);
+            }
+
+            if (result.metadata) {
+                displayMetadata(result.metadata);
+            }
+        }
+
+        function displayAsyncResults(results) {
+            if (results) {
+                displayFinancialData(results.financial_data);
+                
+                if (results.validation_results) {
+                    displayValidationResults(results.validation_results);
+                }
+
+                if (results.metadata) {
+                    displayMetadata(results.metadata);
+                }
+            }
+        }
+
+        function displaySampleData(sampleData) {
+            let html = '<h4>範例數據：</h4>';
+            for (const [key, data] of Object.entries(sampleData)) {
+                html += `
+                    <div class="metric">
+                        <span class="metric-name">${translateMetricName(key)}：</span>
+                        <span class="metric-value">${formatNumber(data.value)} ${getUnitName(data.unit_multiplier)}</span>
+                    </div>
+                `;
+            }
+            return html;
+        }
+
+        function displayFinancialData(financialData) {
+            if (!financialData || Object.keys(financialData).length === 0) {
+                document.getElementById('results').innerHTML = '<div class="status error">未能提取到財務數據</div>';
+                return;
+            }
+
+            let html = '<div class="financial-data"><h3>💰 提取的財務數據</h3>';
+            
+            for (const [key, data] of Object.entries(financialData)) {
+                html += `
+                    <div class="metric">
+                        <span class="metric-name">${translateMetricName(key)}：</span>
+                        <span class="metric-value">
+                            ${formatNumber(data.value)} ${getUnitName(data.unit_multiplier)}
+                            <small style="color: #6c757d;">(${data.extraction_method}, 置信度: ${(data.confidence * 100).toFixed(1)}%)</small>
+                        </span>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            document.getElementById('results').innerHTML = html;
+        }
+
+        function displayValidationResults(validation) {
+            if (!validation) return;
+
+            let html = '<div class="validation-results"><h3>✅ 數據驗證結果</h3>';
+            
+            if (validation.warnings && validation.warnings.length > 0) {
+                html += '<h4>⚠️ 警告：</h4>';
+                validation.warnings.forEach(warning => {
+                    html += `<div class="warning">${warning}</div>`;
+                });
+            }
+            
+            if (validation.errors && validation.errors.length > 0) {
+                html += '<h4>❌ 錯誤：</h4>';
+                validation.errors.forEach(error => {
+                    html += `<div class="error-msg">${error}</div>`;
+                });
+            }
+            
+            if (validation.suggestions && validation.suggestions.length > 0) {
+                html += '<h4>💡 建議：</h4>';
+                validation.suggestions.forEach(suggestion => {
+                    html += `<div class="warning">${suggestion}</div>`;
+                });
+            }
+            
+            html += '</div>';
+            document.getElementById('results').innerHTML += html;
+        }
+
+        function displayMetadata(metadata) {
+            let html = '<div class="financial-data"><h3>📄 文件信息</h3>';
+            
+            if (metadata.filename) {
+                html += `<div class="metric"><span class="metric-name">檔案名稱：</span><span class="metric-value">${metadata.filename}</span></div>`;
+            }
+            
+            if (metadata.file_size) {
+                html += `<div class="metric"><span class="metric-name">檔案大小：</span><span class="metric-value">${formatFileSize(metadata.file_size)}</span></div>`;
+            }
+            
+            if (metadata.total_pages) {
+                html += `<div class="metric"><span class="metric-name">總頁數：</span><span class="metric-value">${metadata.total_pages}</span></div>`;
+            }
+            
+            if (metadata.extraction_methods) {
+                html += `<div class="metric"><span class="metric-name">提取方法：</span><span class="metric-value">${metadata.extraction_methods.join(', ')}</span></div>`;
+            }
+            
+            html += '</div>';
+            document.getElementById('results').innerHTML += html;
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            if (show) {
+                loadingDiv.classList.add('show');
+            } else {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function showProgress(progress, message) {
+            const progressDiv = document.getElementById('progress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressDiv.style.display = 'block';
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${message} (${progress}%)`;
+        }
+
+        function hideProgress() {
+            document.getElementById('progress').style.display = 'none';
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('statusMessage').innerHTML = '';
+            hideProgress();
+        }
+
+        function translateMetricName(key) {
+            const translations = {
+                'total_assets': '總資產',
+                'current_assets': '流動資產',
+                'total_liabilities': '總負債',
+                'current_liabilities': '流動負債',
+                'shareholders_equity': '股東權益',
+                'revenue': '營收',
+                'gross_profit': '毛利',
+                'operating_income': '營業利益',
+                'net_income': '淨利',
+                'eps': '每股盈餘',
+                'operating_cash_flow': '營業活動現金流',
+                'investing_cash_flow': '投資活動現金流',
+                'financing_cash_flow': '融資活動現金流'
+            };
+            return translations[key] || key;
+        }
+
+        function getUnitName(multiplier) {
+            const units = {
+                1: '元',
+                1000: '千元',
+                10000: '萬元',
+                1000000: '百萬元',
+                100000000: '億元'
+            };
+            return units[multiplier] || '';
+        }
+
+        function formatNumber(num) {
+            if (typeof num !== 'number') return num;
+            return new Intl.NumberFormat('zh-TW').format(num);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

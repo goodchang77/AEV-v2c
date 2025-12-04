@@ -1,0 +1,36 @@
+# 系統與依賴 (Dependencies)
+node_modules/
+bower_components/
+dist/
+build/
+__pycache__/
+*.pyc
+
+# 環境變數與密鑰 (Security Risk - Critical!)
+.env
+.env.local
+.env.production
+.env.sample
+*.pem
+*.key
+
+# IDE 設定
+.vscode/
+.idea/
+
+# 通用作業系統檔案
+.DS_Store
+Thumbs.db
+
+# --- Python 專用 ---
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# --- Java/其他 ---
+target/
+bin/
+obj/
+*.log

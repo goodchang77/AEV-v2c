@@ -1,0 +1,288 @@
+{
+  "test_date": "2025-09-03T09:50:05.302804",
+  "test_type": "Enhanced Multi-Source Integration Test",
+  "etf_info": {
+    "name": "元大台灣卓越50證券投資信託基金",
+    "code": "0050",
+    "test_scope": "前十大持股成分股 (增強版多數據源)"
+  },
+  "summary": {
+    "total_stocks": 10,
+    "successful_stocks": 10,
+    "success_rate": 1.0,
+    "avg_data_quality_score": 60.0,
+    "weight_market_cap_correlation": 0.9975138179467742
+  },
+  "data_source_performance": {
+    "Yahoo Finance": {
+      "total": 10,
+      "success": 0
+    },
+    "Local API": {
+      "total": 10,
+      "success": 0
+    },
+    "Enhanced TWSE Simulation": {
+      "total": 10,
+      "success": 10
+    }
+  },
+  "industry_concentration": {
+    "半導體": 64.64,
+    "電腦及週邊設備": 6.119999999999999,
+    "金融保險": 5.02,
+    "電子零組件": 2.31
+  },
+  "detailed_results": {
+    "2330": {
+      "code": "2330",
+      "name": "台積電",
+      "weight": 59.36,
+      "industry": "半導體",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 584.16,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 3467.5532989801864,
+        "pe_ratio": 16.9,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 49407,
+        "volume_k": 49.407,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2317": {
+      "code": "2317",
+      "name": "鴻海",
+      "weight": 4.56,
+      "industry": "電腦及週邊設備",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 104.71,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 47.74557027390858,
+        "pe_ratio": 12.2,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 52091,
+        "volume_k": 52.091,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2454": {
+      "code": "2454",
+      "name": "聯發科",
+      "weight": 4.23,
+      "industry": "半導體",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 826.89,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 349.77390930851465,
+        "pe_ratio": 19.4,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 11333,
+        "volume_k": 11.333,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2308": {
+      "code": "2308",
+      "name": "台達電",
+      "weight": 2.31,
+      "industry": "電子零組件",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 313.25,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 72.36015647790244,
+        "pe_ratio": 11.0,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 7443,
+        "volume_k": 7.443,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2382": {
+      "code": "2382",
+      "name": "廣達",
+      "weight": 1.56,
+      "industry": "電腦及週邊設備",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 92.07,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 14.362333826726386,
+        "pe_ratio": 13.0,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 12018,
+        "volume_k": 12.018,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2881": {
+      "code": "2881",
+      "name": "富邦金",
+      "weight": 1.4,
+      "industry": "金融保險",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 65.7,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 9.197763772399863,
+        "pe_ratio": 7.9,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 25631,
+        "volume_k": 25.631,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2891": {
+      "code": "2891",
+      "name": "中信金",
+      "weight": 1.38,
+      "industry": "金融保險",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 27.9,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 3.8507700658465445,
+        "pe_ratio": 9.2,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 21556,
+        "volume_k": 21.556,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2882": {
+      "code": "2882",
+      "name": "國泰金",
+      "weight": 1.19,
+      "industry": "金融保險",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 55.74,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 6.633209469379236,
+        "pe_ratio": 12.9,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 7775,
+        "volume_k": 7.775,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "2886": {
+      "code": "2886",
+      "name": "兆豐金",
+      "weight": 1.05,
+      "industry": "金融保險",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 35.8,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 3.758549727774937,
+        "pe_ratio": 5.5,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 20262,
+        "volume_k": 20.262,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    },
+    "3711": {
+      "code": "3711",
+      "name": "日月光投控",
+      "weight": 1.05,
+      "industry": "半導體",
+      "success": true,
+      "data_sources": {
+        "Yahoo Finance": false,
+        "Local API": false,
+        "Enhanced TWSE Simulation": true
+      },
+      "market_data": {
+        "current_price": 124.65,
+        "price_source": "Enhanced TWSE Simulation",
+        "estimated_market_cap": 13.088149169886545,
+        "pe_ratio": 16.6,
+        "pe_source": "Enhanced TWSE Simulation",
+        "volume": 13798,
+        "volume_k": 13.798,
+        "volume_source": "Enhanced TWSE Simulation"
+      },
+      "tests": {},
+      "data_quality_score": 60.0,
+      "source_success_rate": 0.3333333333333333
+    }
+  }
+}

@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # 主應用程式
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: financial_app_local
+    environment:
+      # 資料庫連線
+      DATABASE_URL: postgresql://postgres:dev_password_2024@postgres:5432/financial_analysis
+      REDIS_URL: redis://:dev_redis_2024@redis:6379/0
+      TIMESERIES_DATABASE_URL: postgresql://postgres:dev_password_2024@timescaledb:5432/timeseries_financial
+      
+      # API 設定
+      API_VERSION: v1
+      DEBUG: true
+      LOG_LEVEL: DEBUG
+      
+      # 外部 API Keys
+      ALPHA_VANTAGE_API_KEY: ***REMOVED***
+      SECRET_KEY: local_dev_secret_key_2024_very_secure
+      
+      # CORS 設定
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000
+      
+      # 其他設定
+      ENVIRONMENT: local
+      TESTING: false
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      timescaledb:
+        condition: service_started
+    networks:
+      - financial_network
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL 主資料庫
+  postgres:
+    image: postgres:15-alpine
+    container_name: financial_postgres_local
+    environment:
+      POSTGRES_DB: financial_analysis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/sample_data:/docker-entrypoint-sample.d
+    networks:
+      - financial_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d financial_analysis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 快取層
+  redis:
+    image: redis:7-alpine
+    container_name: financial_redis_local
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - financial_network
+    command: redis-server --appendonly yes --requirepass dev_redis_2024
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "dev_redis_2024", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # TimescaleDB 時序資料庫
+  timescaledb:
+    image: timescale/timescaledb:2.11.0-pg15
+    container_name: financial_timescale_local
+    environment:
+      POSTGRES_DB: timeseries_financial
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password_2024
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./database/timescale_init:/docker-entrypoint-initdb.d
+    networks:
+      - financial_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d timeseries_financial"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin 資料庫管理界面
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: financial_pgadmin_local
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@financial.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./config/pgadmin_servers.json:/pgadmin4/servers.json
+    networks:
+      - financial_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Redis Insight - Redis 管理界面
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: financial_redis_insight
+    ports:
+      - "8001:8001"
+    volumes:
+      - redis_insight_data:/db
+    networks:
+      - financial_network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Adminer - 輕量級資料庫管理
+  adminer:
+    image: adminer:4.8.1
+    container_name: financial_adminer
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - financial_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  timescale_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  redis_insight_data:
+    driver: local
+
+networks:
+  financial_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

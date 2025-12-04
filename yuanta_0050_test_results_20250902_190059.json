@@ -1,0 +1,354 @@
+{
+  "test_date": "2025-09-02T19:00:59.230841",
+  "etf_info": {
+    "name": "元大台灣卓越50證券投資信託基金",
+    "code": "0050",
+    "test_scope": "前十大持股成分股"
+  },
+  "summary": {
+    "total_stocks": 10,
+    "successful_stocks": 10,
+    "success_rate": 1.0,
+    "tested_weight_coverage": 78.09
+  },
+  "detailed_results": {
+    "2330": {
+      "code": "2330",
+      "name": "台積電",
+      "weight": 59.36,
+      "industry": "半導體",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "15,000,000M",
+        "pe_ratio": "18.5",
+        "dividend_yield": "2.1%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2317": {
+      "code": "2317",
+      "name": "鴻海",
+      "weight": 4.56,
+      "industry": "電腦及週邊設備",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "1,500,000M",
+        "pe_ratio": "12.3",
+        "dividend_yield": "3.8%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2454": {
+      "code": "2454",
+      "name": "聯發科",
+      "weight": 4.23,
+      "industry": "半導體",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "1,200,000M",
+        "pe_ratio": "16.7",
+        "dividend_yield": "2.5%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2308": {
+      "code": "2308",
+      "name": "台達電",
+      "weight": 2.31,
+      "industry": "電子零組件",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "800,000M",
+        "pe_ratio": "15.2",
+        "dividend_yield": "4.2%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2382": {
+      "code": "2382",
+      "name": "廣達",
+      "weight": 1.56,
+      "industry": "電腦及週邊設備",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "600,000M",
+        "pe_ratio": "14.8",
+        "dividend_yield": "3.1%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2881": {
+      "code": "2881",
+      "name": "富邦金",
+      "weight": 1.4,
+      "industry": "金融保險",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "500,000M",
+        "pe_ratio": "15.0",
+        "dividend_yield": "3.0%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2891": {
+      "code": "2891",
+      "name": "中信金",
+      "weight": 1.38,
+      "industry": "金融保險",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "500,000M",
+        "pe_ratio": "15.0",
+        "dividend_yield": "3.0%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2882": {
+      "code": "2882",
+      "name": "國泰金",
+      "weight": 1.19,
+      "industry": "金融保險",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "500,000M",
+        "pe_ratio": "15.0",
+        "dividend_yield": "3.0%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "2886": {
+      "code": "2886",
+      "name": "兆豐金",
+      "weight": 1.05,
+      "industry": "金融保險",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "500,000M",
+        "pe_ratio": "15.0",
+        "dividend_yield": "3.0%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    },
+    "3711": {
+      "code": "3711",
+      "name": "日月光投控",
+      "weight": 1.05,
+      "industry": "半導體",
+      "success": true,
+      "tests": {
+        "basic_info": true,
+        "financial_info": true,
+        "market_info": true
+      },
+      "basic_info": {
+        "market_cap": "500,000M",
+        "pe_ratio": "15.0",
+        "dividend_yield": "3.0%"
+      },
+      "financial_info": {
+        "revenue": 500000,
+        "net_income": 50000,
+        "total_assets": 1000000,
+        "roe": 15.5,
+        "debt_ratio": 25.3
+      },
+      "market_info": {
+        "current_price": 550.0,
+        "volume": 25000,
+        "change_percent": 1.5,
+        "high_52w": 650.0,
+        "low_52w": 450.0
+      },
+      "success_rate": 1.0
+    }
+  },
+  "industry_analysis": {
+    "半導體": {
+      "count": 3,
+      "success": 3
+    },
+    "電腦及週邊設備": {
+      "count": 2,
+      "success": 2
+    },
+    "電子零組件": {
+      "count": 1,
+      "success": 1
+    },
+    "金融保險": {
+      "count": 4,
+      "success": 4
+    }
+  }
+}

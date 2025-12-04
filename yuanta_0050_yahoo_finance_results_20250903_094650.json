@@ -1,0 +1,209 @@
+{
+  "test_date": "2025-09-03T09:46:50.684729",
+  "data_source": "Yahoo Finance API",
+  "etf_info": {
+    "name": "元大台灣卓越50證券投資信託基金",
+    "code": "0050",
+    "test_scope": "前十大持股成分股 (真實市場數據)"
+  },
+  "summary": {
+    "total_stocks": 10,
+    "successful_stocks": 0,
+    "success_rate": 0.0,
+    "avg_market_cap_billion": 0,
+    "total_market_cap_billion": 0,
+    "weight_market_cap_correlation": null
+  },
+  "detailed_results": {
+    "2330": {
+      "code": "2330",
+      "name": "台積電",
+      "weight": 59.36,
+      "industry": "半導體",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2317": {
+      "code": "2317",
+      "name": "鴻海",
+      "weight": 4.56,
+      "industry": "電腦及週邊設備",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2454": {
+      "code": "2454",
+      "name": "聯發科",
+      "weight": 4.23,
+      "industry": "半導體",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2308": {
+      "code": "2308",
+      "name": "台達電",
+      "weight": 2.31,
+      "industry": "電子零組件",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2382": {
+      "code": "2382",
+      "name": "廣達",
+      "weight": 1.56,
+      "industry": "電腦及週邊設備",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2881": {
+      "code": "2881",
+      "name": "富邦金",
+      "weight": 1.4,
+      "industry": "金融保險",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2891": {
+      "code": "2891",
+      "name": "中信金",
+      "weight": 1.38,
+      "industry": "金融保險",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2882": {
+      "code": "2882",
+      "name": "國泰金",
+      "weight": 1.19,
+      "industry": "金融保險",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "2886": {
+      "code": "2886",
+      "name": "兆豐金",
+      "weight": 1.05,
+      "industry": "金融保險",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    },
+    "3711": {
+      "code": "3711",
+      "name": "日月光投控",
+      "weight": 1.05,
+      "industry": "半導體",
+      "success": false,
+      "data_source": "Yahoo Finance",
+      "tests": {
+        "basic_info": false,
+        "price_data": false,
+        "financial_data": true
+      },
+      "financial_data": {},
+      "success_rate": 0.3333333333333333
+    }
+  },
+  "industry_analysis": {
+    "半導體": {
+      "count": 3,
+      "success": 0
+    },
+    "電腦及週邊設備": {
+      "count": 2,
+      "success": 0
+    },
+    "電子零組件": {
+      "count": 1,
+      "success": 0
+    },
+    "金融保險": {
+      "count": 4,
+      "success": 0
+    }
+  },
+  "industry_performance": {
+    "半導體": {
+      "avg_market_cap_billion": 0,
+      "avg_pe_ratio": 0,
+      "count": 0
+    },
+    "電腦及週邊設備": {
+      "avg_market_cap_billion": 0,
+      "avg_pe_ratio": 0,
+      "count": 0
+    },
+    "電子零組件": {
+      "avg_market_cap_billion": 0,
+      "avg_pe_ratio": 0,
+      "count": 0
+    },
+    "金融保險": {
+      "avg_market_cap_billion": 0,
+      "avg_pe_ratio": 0,
+      "count": 0
+    }
+  }
+}

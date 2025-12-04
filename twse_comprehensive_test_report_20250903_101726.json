@@ -1,0 +1,61 @@
+{
+  "test_date": "2025-09-03T10:17:11.616467",
+  "test_duration_seconds": 14.643503,
+  "summary": {
+    "total_tests": 19,
+    "passed_tests": 16,
+    "success_rate": 0.8421052631578947,
+    "overall_status": "PASS"
+  },
+  "detailed_results": {
+    "core_service": {
+      "single_quote": true,
+      "multiple_quotes": true,
+      "market_summary": true,
+      "stock_search": true,
+      "health_check": true,
+      "cache_mechanism": true,
+      "error_handling": true
+    },
+    "data_quality": {
+      "data_completeness": true,
+      "data_accuracy": true,
+      "data_freshness": true,
+      "data_consistency": true
+    },
+    "integration": {
+      "external_data_manager": true,
+      "api_endpoints": false,
+      "market_data_sources": false,
+      "failover_mechanism": true
+    },
+    "performance": {
+      "response_time": true,
+      "throughput": true,
+      "memory_usage": false,
+      "concurrent_requests": true
+    }
+  },
+  "test_categories": {
+    "core_service": {
+      "tests": 7,
+      "passed": 7,
+      "critical": true
+    },
+    "data_quality": {
+      "tests": 4,
+      "passed": 4,
+      "critical": true
+    },
+    "system_integration": {
+      "tests": 4,
+      "passed": 2,
+      "critical": true
+    },
+    "performance": {
+      "tests": 4,
+      "passed": 3,
+      "critical": false
+    }
+  }
+}
