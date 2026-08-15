@@ -50,6 +50,9 @@ WORKDIR /app
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 
+# Copy database init SQL（scripts/init_db.py 需要）
+COPY database/ ./database/
+
 # Copy configuration files if they exist
 COPY config/ ./config/
 COPY alembic/ ./alembic/

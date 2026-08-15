@@ -1,0 +1,74 @@
+# Azure VM 精簡生產部署（單一 VM + Docker Compose）
+# ==============================================
+# 只保留核心服務：API + PostgreSQL + Redis。
+# 監控(Prometheus/Grafana)與反向代理(Nginx/TLS)可視需求再加。
+#
+# 用法（在專案根目錄）:
+#   cp deploy/azure/.env.production.example deploy/azure/.env.production
+#   # 編輯 deploy/azure/.env.production 填入密碼與 key
+#   docker compose -f docker-compose.azure.yml --env-file deploy/azure/.env.production up -d --build
+
+services:
+  financial-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: financial-analysis:${VERSION:-latest}
+    container_name: financial-api
+    restart: unless-stopped
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-financial_analysis}
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: financial-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-financial_analysis}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?請在 deploy/azure/.env.production 設定 POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # 首次初始化會自動套用建表 + 種子資料
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: financial-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
