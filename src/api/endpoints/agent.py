@@ -18,6 +18,9 @@ router = APIRouter(tags=["AI Agent"])
 _mcp_server = None
 _agent = None
 
+# 任務儲存（記憶體）：task_id -> 結果。正式環境可改存 Redis/DB。
+_task_store = {}
+
 def get_agent(db: Session = Depends(get_db)) -> FinancialAnalystAgent:
     """獲取AI Agent實例"""
     global _mcp_server, _agent
@@ -57,7 +60,13 @@ async def analyze_company(
             company_id=request.company_id,
             context=request.context
         )
-        
+
+        # 存入任務儲存，供 /tasks/{task_id} 查詢
+        _task_store[result["task_id"]] = {
+            "status": "completed",
+            "result": result,
+        }
+
         return StandardResponse(
             success=True,
             data=result,
@@ -73,11 +82,18 @@ async def analyze_company(
 
 @router.get("/tasks/{task_id}", response_model=StandardResponse)
 async def get_task_status(task_id: str):
-    """獲取任務狀態 (未來實作)"""
-    # TODO: 實作任務狀態查詢
+    """查詢任務狀態與結果"""
+    task = _task_store.get(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"找不到任務: {task_id}")
+
     return StandardResponse(
-        success=False,
-        error="Not implemented yet"
+        success=True,
+        data={
+            "task_id": task_id,
+            "status": task["status"],
+            "result": task["result"],
+        }
     )
 
 
