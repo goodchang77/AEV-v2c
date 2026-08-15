@@ -14,6 +14,19 @@ __pycache__/
 *.pem
 *.key
 
+# API Key 明文檔（勿提交）
+Alpha Vantage_api key.txt
+
+# Terraform 狀態與本地產物（可能含敏感值，勿提交）
+*.tfstate
+*.tfstate.*
+*.tfplan
+deploy/gcp/terraform/tfplan
+.terraform/
+
+# Kubernetes Secret（實際部署用 secret.example.yaml + 外部密鑰管理）
+deploy/kubernetes/base/secret.yaml
+
 # IDE 設定
 .vscode/
 .idea/
