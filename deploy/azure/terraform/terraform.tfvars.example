@@ -4,7 +4,7 @@
 
 project_name      = "aev"
 location          = "japaneast"        # 對台延遲最低；備選 eastasia / southeastasia
-vm_size           = "Standard_B2ms"    # 2 vCPU / 8GB RAM
+vm_size           = "Standard_D2s_v3"  # 2 vCPU / 8GB RAM；更省可試 Standard_D2as_v4
 admin_username    = "azureuser"
 ssh_public_key_path = "~/.ssh/id_rsa.pub"
 

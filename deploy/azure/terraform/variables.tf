@@ -15,9 +15,9 @@ variable "location" {
 }
 
 variable "vm_size" {
-  description = "VM 規格（2 vCPU / 8GB RAM，適合 app+Postgres+Redis）"
+  description = "VM 規格（2 vCPU / 8GB RAM；D 系列比 B 系列容量充足，Standard_D2as_v4 更便宜）"
   type        = string
-  default     = "Standard_B2ms"
+  default     = "Standard_D2s_v3"
 }
 
 variable "admin_username" {
