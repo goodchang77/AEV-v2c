@@ -32,10 +32,10 @@ class USStocksIntegrationAnalyzer:
             from services.external_data_manager import ExternalDataManager
             
             print("✅ Alpha Vantage 服務模組導入成功")
-            print(f"✅ API Key 已配置: ***REMOVED***")
+            print(f"✅ API Key 已配置: {{os.getenv('ALPHA_VANTAGE_API_KEY', '未設定')}}")
             
             # 嘗試單一簡單查詢
-            async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+            async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
                 print("✅ 外部資料管理器初始化成功")
                 
                 # 測試健康檢查

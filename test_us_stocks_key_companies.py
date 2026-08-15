@@ -91,7 +91,7 @@ class USStockKeyTester:
         try:
             from services.external_data_manager import ExternalDataManager
             
-            async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+            async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
                 print(f"📊 開始測試 {len(TEST_US_COMPANIES)} 家美國重點公司...")
                 print()
                 
@@ -167,7 +167,7 @@ class USStockKeyTester:
                 "JNJ": TEST_US_COMPANIES["JNJ"],   # 醫療
             }
             
-            async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+            async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
                 print("📊 測試統一資料管理器的美股查詢...")
                 print()
                 

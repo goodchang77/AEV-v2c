@@ -105,7 +105,7 @@ class USStockExchangeTester:
         try:
             from services.external_data_manager import ExternalDataManager
             
-            async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+            async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
                 print(f"📊 開始測試 {len(TEST_US_COMPANIES)} 家美國公司...")
                 print()
                 
@@ -187,7 +187,7 @@ class USStockExchangeTester:
             # 測試強制指定不同資料源
             test_symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
             
-            async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+            async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
                 print("📊 測試資料源優先順序和備援機制...")
                 print()
                 

@@ -46,7 +46,7 @@
 ### 資料源配置
 ```python
 # Alpha Vantage (主要美股資料源)
-ALPHA_VANTAGE_API_KEY=***REMOVED***
+ALPHA_VANTAGE_API_KEY=your-alpha-vantage-key
 狀態: ✅ 正常運作
 
 # Yahoo Finance (台股與美股備援)
@@ -129,7 +129,7 @@ async with ExternalDataManager(alpha_vantage_key="YOUR_KEY") as manager:
 ### 環境變數設定
 ```bash
 # .env.local 已設定
-ALPHA_VANTAGE_API_KEY=***REMOVED***
+ALPHA_VANTAGE_API_KEY=your-alpha-vantage-key
 ```
 
 ---

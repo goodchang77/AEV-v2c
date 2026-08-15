@@ -160,7 +160,7 @@ class IndustryDiversityTester:
         try:
             from services.external_data_manager import ExternalDataManager
             
-            async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+            async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
                 print("📊 測試統一資料管理器的公司查詢...")
                 print()
                 

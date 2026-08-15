@@ -540,7 +540,7 @@ class LocalAPITester:
             import json
             
             # 測試 Alpha Vantage API
-            alpha_key = "***REMOVED***"
+            alpha_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
             url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey={alpha_key}"
             
             with urllib.request.urlopen(url, timeout=10) as response:

@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union
 import json
 import logging
+import os
 from dataclasses import dataclass, asdict
 from enum import Enum
 import numpy as np
@@ -597,7 +598,7 @@ async def quick_test():
     """快速測試功能"""
     print("🧪 快速測試外部資料源...")
     
-    alpha_key = "***REMOVED***"  # 從檔案中讀取的 API Key
+    alpha_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")  # 從檔案中讀取的 API Key
     
     async with ExternalDataManager(alpha_vantage_key=alpha_key) as manager:
         # 測試台股

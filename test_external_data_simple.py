@@ -21,7 +21,7 @@ load_dotenv('.env.local')
 
 class SimpleExternalDataTest:
     def __init__(self):
-        self.alpha_key = os.getenv("ALPHA_VANTAGE_API_KEY", "***REMOVED***")
+        self.alpha_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
         self.test_results = []
 
     def log_test(self, name: str, success: bool, message: str = ""):

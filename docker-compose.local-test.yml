@@ -19,7 +19,7 @@ services:
       LOG_LEVEL: DEBUG
       
       # 外部 API Keys
-      ALPHA_VANTAGE_API_KEY: ***REMOVED***
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
       SECRET_KEY: local_dev_secret_key_2024_very_secure
       
       # CORS 設定

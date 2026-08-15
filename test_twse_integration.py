@@ -74,7 +74,7 @@ async def test_external_data_manager_with_twse():
     try:
         from services.external_data_manager import ExternalDataManager, DataSource
         
-        async with ExternalDataManager(alpha_vantage_key="***REMOVED***") as manager:
+        async with ExternalDataManager(alpha_vantage_key=os.getenv("ALPHA_VANTAGE_API_KEY", "")) as manager:
             print("\n1️⃣ 測試台股資料 (應優先使用 TWSE)...")
             tsmc_quote = await manager.get_stock_quote("2330")
             if tsmc_quote:
