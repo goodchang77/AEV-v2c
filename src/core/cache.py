@@ -117,10 +117,22 @@ class RedisCache:
     def __init__(self, redis_url: str):
         self._redis_url = redis_url
         self._redis: Optional[redis.Redis] = None
+        self._loop = None
         self._logger = logger
     
     async def connect(self):
-        """連接到Redis"""
+        """連接到Redis（若已連接且事件迴圈未變更則略過；否則重新連接）"""
+        loop = asyncio.get_running_loop()
+        if self._redis is not None and self._loop is loop:
+            return
+        # 舊連接綁定在已關閉的 event loop，需先關閉避免「Event loop is closed」
+        if self._redis is not None:
+            try:
+                await self._redis.close()
+            except Exception:
+                pass
+            self._redis = None
+            self._loop = None
         try:
             self._redis = redis.from_url(
                 self._redis_url,
@@ -131,18 +143,28 @@ class RedisCache:
                 retry_on_timeout=True,
                 max_connections=20
             )
+            self._loop = loop
             # 測試連接
             await self._redis.ping()
             self._logger.info("Redis cache connected successfully")
         except Exception as e:
             self._logger.error(f"Failed to connect to Redis: {e}")
+            self._redis = None
+            self._loop = None
             raise
+
+    async def _ensure_connected(self):
+        """確保 Redis 連線可用（供 get/set 等操作呼叫）"""
+        if self._redis is None or self._loop is not asyncio.get_running_loop():
+            await self.connect()
     
     async def disconnect(self):
         """斷開Redis連接"""
         try:
             if self._redis:
                 await self._redis.close()
+                self._redis = None
+                self._loop = None
                 self._logger.info("Redis cache disconnected")
         except Exception as e:
             self._logger.error(f"Error disconnecting Redis: {e}")
@@ -150,8 +172,7 @@ class RedisCache:
     async def get(self, key: str) -> Optional[Any]:
         """取得快取資料"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             value = await self._redis.get(key)
             if value:
@@ -169,8 +190,7 @@ class RedisCache:
     async def set(self, key: str, value: Any, expire: Optional[int] = None) -> bool:
         """設定快取資料"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             # 序列化值
             if isinstance(value, (dict, list)):
@@ -191,8 +211,7 @@ class RedisCache:
     async def delete(self, key: str) -> bool:
         """刪除快取資料"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             result = await self._redis.delete(key)
             return result > 0
@@ -203,8 +222,7 @@ class RedisCache:
     async def exists(self, key: str) -> bool:
         """檢查快取是否存在"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             result = await self._redis.exists(key)
             return result > 0
@@ -215,8 +233,7 @@ class RedisCache:
     async def clear(self) -> bool:
         """清空所有快取"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             await self._redis.flushall()
             return True
@@ -227,8 +244,7 @@ class RedisCache:
     async def get_stats(self) -> Dict[str, Any]:
         """取得Redis統計資訊"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             info = await self._redis.info()
             return {
@@ -246,8 +262,7 @@ class RedisCache:
     async def health_check(self) -> bool:
         """Redis健康檢查"""
         try:
-            if not self._redis:
-                await self.connect()
+            await self._ensure_connected()
             
             response = await self._redis.ping()
             return response is True
