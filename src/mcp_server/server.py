@@ -11,7 +11,10 @@ MCP Server 核心實作
 """
 
 import asyncio
+import base64
 import logging
+from dataclasses import asdict
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 import json
@@ -36,11 +39,9 @@ from src.mcp_server.tools import (
 )
 
 # 引入業務邏輯服務
-from src.services.financial_calculator import FinancialCalculator
-from src.services.valuation_models import DCFValuationModel
+from src.services.valuation_models import DCFParameters, DCFValuationModel
 from src.services.risk_assessment import RiskAssessmentEngine
-from src.services.peer_analysis import PeerAnalyzer
-from src.services.data_service import CompanyDataService, FinancialDataService
+from src.services.data_service import CompanyDataService, FinancialDataService, IndustryDataService
 from src.services.report_service import ReportService
 from src.services.pdf_processor import FinancialPDFProcessor
 from src.services.alert_monitor import AlertMonitor
@@ -299,316 +300,132 @@ class MCPServer:
     # ========================================================================
     # 工具執行器實作
     # ========================================================================
-    
+
     async def _execute_financial_ratios(
         self,
         input_data: FinancialRatiosInput
-    ) -> FinancialRatiosOutput:
-        """執行財務比率計算"""
-        calculator = FinancialCalculator(self.db)
-        
-        # 計算指定類別的比率
-        if input_data.ratio_categories:
-            ratios = {}
-            for category in input_data.ratio_categories:
-                category_ratios = calculator.calculate_ratio_category(
-                    company_id=input_data.company_id,
-                    category=category,
-                    period=input_data.period
-                )
-                ratios.update(category_ratios)
-        else:
-            # 計算所有比率
-            ratios = calculator.calculate_all_ratios(
-                company_id=input_data.company_id,
-                period=input_data.period
-            )
-        
-        # 計算綜合評分
-        health_score = calculator.calculate_financial_health_score(ratios)
-        
-        # 評級
-        if health_score >= 90:
-            rating = "Excellent"
-        elif health_score >= 75:
-            rating = "Good"
-        elif health_score >= 60:
-            rating = "Average"
-        elif health_score >= 40:
-            rating = "Below Average"
-        else:
-            rating = "Poor"
-        
-        return FinancialRatiosOutput(
-            company_id=input_data.company_id,
-            company_name=calculator.get_company_name(input_data.company_id),
-            period=input_data.period,
-            period_date=calculator.get_period_date(input_data.company_id, input_data.period),
-            financial_structure=ratios.get("financial_structure", {}),
-            liquidity_ratios=ratios.get("liquidity", {}),
-            efficiency_ratios=ratios.get("efficiency", {}),
-            profitability_ratios=ratios.get("profitability", {}),
-            cash_flow_ratios=ratios.get("cash_flow", {}),
-            financial_health_score=health_score,
-            rating=rating
-        )
-    
+    ) -> Dict[str, Any]:
+        """執行財務比率計算（對齊 FinancialDataService）"""
+        service = FinancialDataService()
+        ratios = await service.get_financial_ratios(input_data.company_id)
+        if not ratios:
+            raise ValueError(f"找不到公司 {input_data.company_id} 的財務比率")
+        return ratios
+
     async def _execute_dcf_valuation(
         self,
         input_data: DCFValuationInput
-    ) -> DCFValuationOutput:
-        """執行DCF估值"""
-        model = DCFValuationModel(self.db)
-        
-        # 計算估值
-        valuation = model.calculate_enterprise_value(
-            company_id=input_data.company_id,
+    ) -> Dict[str, Any]:
+        """執行DCF估值（對齊 DCFValuationModel）"""
+        fin_svc = FinancialDataService()
+        statements = await fin_svc.get_latest_financial_statements(input_data.company_id)
+        if statements is None or not statements.revenue:
+            raise ValueError(f"找不到公司 {input_data.company_id} 的財務資料")
+
+        params = DCFParameters(
             revenue_growth_rates=input_data.revenue_growth_rates,
             terminal_growth_rate=input_data.terminal_growth_rate,
-            discount_rate=input_data.discount_rate
+            discount_rate=input_data.discount_rate or 0.10,
         )
-        
-        # 敏感性分析
-        sensitivity = None
-        if input_data.perform_sensitivity_analysis:
-            sensitivity = model.perform_sensitivity_analysis(
-                base_result=valuation,
-                discount_rate_range=(-0.02, 0.02),
-                growth_rate_range=(-0.01, 0.01)
-            )
-        
-        # 獲取當前市價
-        current_price = model.get_current_market_price(input_data.company_id)
-        current_market_cap = model.get_current_market_cap(input_data.company_id)
-        
-        # 計算上漲/下跌空間
-        upside = ((valuation["fair_value_per_share"] - current_price) / current_price) * 100
-        
-        # 投資建議
-        if upside > 30:
-            recommendation = "強力買入"
-        elif upside > 15:
-            recommendation = "買入"
-        elif upside > -15:
-            recommendation = "持有"
-        elif upside > -30:
-            recommendation = "賣出"
-        else:
-            recommendation = "強力賣出"
-        
-        return DCFValuationOutput(
-            company_id=input_data.company_id,
-            company_name=model.get_company_name(input_data.company_id),
-            valuation_date=datetime.now(),
-            enterprise_value=valuation["enterprise_value"] / 100_000_000,  # 轉換為億元
-            equity_value=valuation["equity_value"] / 100_000_000,
-            fair_value_per_share=valuation["fair_value_per_share"],
-            current_market_price=current_price,
-            current_market_cap=current_market_cap / 100_000_000,
-            upside_downside_percentage=round(upside, 2),
-            investment_recommendation=recommendation,
-            valuation_details=valuation,
-            sensitivity_analysis=sensitivity
+        model = DCFValuationModel(params)
+        result = await asyncio.to_thread(
+            model.calculate_enterprise_value, float(statements.revenue)
         )
-    
+        return _to_dict(result)
+
     async def _execute_risk_assessment(
         self,
         input_data: RiskAssessmentInput
-    ) -> RiskAssessmentOutput:
-        """執行風險評估"""
-        engine = RiskAssessmentEngine(self.db)
-        
-        # 綜合風險評估
-        risk_result = engine.assess_overall_risk(
-            company_id=input_data.company_id,
-            assessment_scope=input_data.assessment_scope
+    ) -> Dict[str, Any]:
+        """執行風險評估（對齊 RiskAssessmentEngine）"""
+        engine = RiskAssessmentEngine()
+        result = await asyncio.to_thread(
+            engine.assess_overall_risk, input_data.company_id
         )
-        
-        # 產業比較 (如果需要)
-        industry_comparison = None
-        if input_data.include_industry_comparison:
-            industry_comparison = engine.compare_risk_with_industry(
-                company_id=input_data.company_id
-            )
-        
-        return RiskAssessmentOutput(
-            company_id=input_data.company_id,
-            company_name=engine.get_company_name(input_data.company_id),
-            assessment_date=datetime.now(),
-            overall_risk_score=risk_result["overall_risk_score"],
-            overall_risk_level=risk_result["risk_level"],
-            risk_grade=risk_result["risk_grade"],
-            risk_breakdown=risk_result["risk_breakdown"],
-            altman_z_score=risk_result["risk_breakdown"]["financial_distress"]["z_score"],
-            bankruptcy_probability=risk_result["risk_breakdown"]["financial_distress"]["probability_of_bankruptcy"],
-            key_concerns=risk_result["key_concerns"],
-            risk_trend=risk_result["risk_trend"],
-            industry_comparison=industry_comparison,
-            recommendations=risk_result["recommendations"]
-        )
-    
+        return result
+
     async def _execute_peer_comparison(
         self,
         input_data: PeerComparisonInput
-    ) -> PeerComparisonOutput:
+    ) -> Dict[str, Any]:
         """執行同業比較"""
-        analyzer = PeerAnalyzer(self.db)
-        
-        # 執行同業比較
-        comparison = analyzer.analyze_peer_comparison(
-            company_id=input_data.company_id,
-            peer_selection_method=input_data.peer_selection_method,
-            manual_peer_ids=input_data.manual_peer_ids,
-            num_peers=input_data.num_peers
-        )
-        
-        return PeerComparisonOutput(
-            company_id=input_data.company_id,
-            company_name=comparison["company_name"],
-            industry=comparison["industry"],
-            comparison_date=datetime.now(),
-            peers=comparison["peers"],
-            rankings=comparison["rankings"],
-            composite_score=comparison["composite_score"],
-            performance_rating=comparison["performance_rating"],
-            comparison_analysis=comparison["comparison_analysis"],
-            swot_analysis=comparison["swot_analysis"],
-            relative_valuation=comparison["relative_valuation"]
-        )
-    
+        basic = await CompanyDataService().get_company_basic_info(input_data.company_id)
+        if not basic:
+            raise ValueError(f"找不到公司 {input_data.company_id}")
+
+        industry_code = basic.get("industry_code")
+        peers = []
+        if industry_code:
+            peers = await IndustryDataService().get_peer_companies_data(
+                industry_code, limit=input_data.num_peers
+            )
+
+        return {
+            "company_id": input_data.company_id,
+            "company_name": basic.get("company_name"),
+            "industry": industry_code,
+            "peers": _to_dict(peers),
+        }
+
     async def _execute_data_fetcher(
         self,
         input_data: DataFetcherInput
-    ) -> DataFetcherOutput:
+    ) -> Dict[str, Any]:
         """執行資料擷取"""
-        service = CompanyDataService(self.db)
-        
-        fetched_data = {}
-        data_sources = []
-        fetch_stats = {
-            "successful": 0,
-            "failed": 0,
-            "total_time_ms": 0
-        }
-        
-        for data_type in input_data.data_types:
-            try:
-                start = time.time()
-                data = service.fetch_data(
-                    company_id=input_data.company_id,
-                    data_type=data_type,
-                    start_date=input_data.start_date,
-                    end_date=input_data.end_date
-                )
-                elapsed = (time.time() - start) * 1000
-                
-                fetched_data[data_type] = data
-                data_sources.extend(data.get("sources", []))
-                fetch_stats["successful"] += 1
-                fetch_stats["total_time_ms"] += elapsed
-                
-            except Exception as e:
-                logger.error(f"Failed to fetch {data_type}", error=str(e))
-                fetched_data[data_type] = {"error": str(e)}
-                fetch_stats["failed"] += 1
-        
-        # 計算資料完整性
-        completeness = {}
-        for data_type, data in fetched_data.items():
-            if isinstance(data, dict) and "error" not in data:
-                completeness[data_type] = 1.0
-            else:
-                completeness[data_type] = 0.0
-        
-        return DataFetcherOutput(
-            company_id=input_data.company_id,
-            company_name=service.get_company_name(input_data.company_id),
-            fetch_date=datetime.now(),
-            fetched_data=fetched_data,
-            data_completeness=completeness,
-            data_sources=list(set(data_sources)),
-            fetch_statistics=fetch_stats
-        )
-    
+        basic = await CompanyDataService().get_company_basic_info(input_data.company_id)
+        fin_svc = FinancialDataService()
+
+        fetched: Dict[str, Any] = {"company": basic}
+        if "ratios" in input_data.data_types:
+            fetched["ratios"] = await fin_svc.get_financial_ratios(input_data.company_id)
+        if "financials" in input_data.data_types:
+            stmts = await fin_svc.get_latest_financial_statements(input_data.company_id)
+            fetched["financials"] = _to_dict(stmts)
+
+        return fetched
+
     async def _execute_report_generator(
         self,
         input_data: ReportGeneratorInput
-    ) -> ReportGeneratorOutput:
+    ) -> Dict[str, Any]:
         """執行報告生成"""
-        service = ReportService(self.db)
-        
-        report = service.generate_report(
+        service = ReportService()
+        return await service.generate_financial_report(
             company_id=input_data.company_id,
             report_type=input_data.report_type,
-            report_format=input_data.report_format,
-            include_sections=input_data.include_sections,
-            language=input_data.language,
-            custom_parameters=input_data.custom_parameters
+            format=input_data.report_format,
         )
-        
-        return ReportGeneratorOutput(
-            report_id=report["report_id"],
-            company_id=input_data.company_id,
-            company_name=report["company_name"],
-            report_type=input_data.report_type,
-            generation_date=datetime.now(),
-            report_content=report.get("content"),
-            report_file_path=report.get("file_path"),
-            report_download_url=report.get("download_url"),
-            executive_summary=report["executive_summary"],
-            report_statistics=report["statistics"]
-        )
-    
+
     async def _execute_document_processor(
         self,
         input_data: DocumentProcessorInput
-    ) -> DocumentProcessorOutput:
-        """執行文件處理"""
-        processor = PDFProcessor()  # 或其他處理器
-        
-        result = processor.process_document(
-            document_type=input_data.document_type,
-            document_source=input_data.document_source,
-            document_data=input_data.document_data,
-            extraction_targets=input_data.extraction_targets,
-            ocr_enabled=input_data.ocr_enabled
-        )
-        
-        return DocumentProcessorOutput(
-            document_id=result["document_id"],
-            document_type=input_data.document_type,
-            processing_date=datetime.now(),
-            extracted_data=result["extracted_data"],
-            financial_statements=result.get("financial_statements"),
-            key_numbers=result["key_numbers"],
-            text_content=result.get("text_content"),
-            processing_statistics=result["statistics"],
-            confidence_scores=result["confidence_scores"]
-        )
-    
+    ) -> Dict[str, Any]:
+        """執行文件處理（對齊 FinancialPDFProcessor）"""
+        processor = FinancialPDFProcessor()
+        if input_data.document_source == "file_path":
+            content = Path(input_data.document_data).read_bytes()
+        elif input_data.document_source == "base64":
+            content = base64.b64decode(input_data.document_data)
+        else:
+            raise ValueError("document_source 僅支援 file_path/base64")
+        return await processor.process_pdf(content, "document.pdf")
+
     async def _execute_alert_monitor(
         self,
         input_data: AlertMonitorInput
-    ) -> AlertMonitorOutput:
+    ) -> Dict[str, Any]:
         """執行警報監控"""
-        monitor = AlertMonitor(self.db)
-        
-        alerts = monitor.check_alerts(
-            company_ids=input_data.company_ids,
-            alert_types=input_data.alert_types,
-            alert_thresholds=input_data.alert_thresholds,
-            lookback_period_days=input_data.lookback_period_days
-        )
-        
-        return AlertMonitorOutput(
-            monitoring_date=datetime.now(),
-            lookback_period_days=input_data.lookback_period_days,
-            alerts=alerts["alerts"],
-            alert_summary=alerts["summary"],
-            companies_requiring_attention=alerts["attention_required"],
-            monitoring_status=alerts["status"]
-        )
-    
+        monitor = AlertMonitor()
+        alerts: List[Dict[str, Any]] = []
+        for company_id in input_data.company_ids:
+            alerts.extend(await monitor.check_financial_alerts(company_id))
+        return {
+            "alerts": alerts,
+            "alert_summary": {},
+            "companies_requiring_attention": [],
+            "monitoring_status": {"checked": input_data.company_ids},
+        }
+
     async def _execute_unknown_tool(self, input_data: Any) -> Dict:
         """未知工具的處理"""
         raise ValueError("Unknown tool executor")
@@ -676,3 +493,20 @@ async def example_usage():
 
 if __name__ == "__main__":
     asyncio.run(example_usage())
+
+
+def _to_dict(obj: Any) -> Any:
+    """將服務回傳物件（dict/dataclass/pydantic/list）轉為可序列化 dict"""
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return obj
+    if isinstance(obj, (list, tuple)):
+        return [_to_dict(x) for x in obj]
+    if hasattr(obj, "dict"):
+        return obj.dict()
+    if hasattr(obj, "__dataclass_fields__"):
+        return asdict(obj)
+    if hasattr(obj, "__dict__"):
+        return {k: v for k, v in vars(obj).items() if not k.startswith("_")}
+    return str(obj)

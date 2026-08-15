@@ -85,7 +85,7 @@ class FinancialAnalystAgent:
         model: str = "claude-sonnet-4-20250514",
         role: AgentRole = AgentRole.FINANCIAL_ANALYST
     ):
-        self.client = anthropic.Anthropic(api_key=anthropic_api_key)
+        self.client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
         self.mcp_server = mcp_server
         self.model = model
         self.role = role
@@ -280,7 +280,7 @@ class FinancialAnalystAgent:
 
 請只回答任務類型代碼(例如: company_analysis)，不要有其他文字。"""
         
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model=self.model,
             max_tokens=50,
             messages=[{"role": "user", "content": classification_prompt}]
@@ -339,7 +339,7 @@ class FinancialAnalystAgent:
 - 輸入參數完整且符合工具定義
 - 只選擇必要的工具，不要過度調用"""
         
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model=self.model,
             max_tokens=2000,
             messages=[{"role": "user", "content": planning_prompt}]
@@ -503,7 +503,7 @@ class FinancialAnalystAgent:
 
 請開始撰寫報告:"""
         
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model=self.model,
             max_tokens=4000,
             system=self.system_prompt,

@@ -79,9 +79,7 @@ MODULES = [
 ]
 
 # 選用模組：需要額外外部套件，或屬孤立/替代實作，不列入必要模組清單。
-OPTIONAL_MODULES = [
-    "src.mcp_server.financial_tools",  # 需安裝 `mcp` SDK；未被 app 引用（tools.py 才是現行實作）
-]
+OPTIONAL_MODULES = []
 
 
 def _import_one(name: str) -> bool:
