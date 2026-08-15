@@ -9,15 +9,15 @@ variable "project_name" {
 }
 
 variable "location" {
-  description = "Azure 區域"
+  description = "Azure 區域（對台灣延遲最低建議 japaneast）"
   type        = string
-  default     = "eastasia"
+  default     = "japaneast"
 }
 
 variable "vm_size" {
-  description = "VM 規格"
+  description = "VM 規格（2 vCPU / 8GB RAM，適合 app+Postgres+Redis）"
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_B2ms"
 }
 
 variable "admin_username" {
