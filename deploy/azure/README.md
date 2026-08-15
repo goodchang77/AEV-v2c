@@ -2,37 +2,63 @@
 
 單一 Azure VM 跑整套：API + PostgreSQL + Redis。
 
+提供兩種方式：(A) Terraform 佈建（推薦）與 (B) 手動建 VM。
+
 ## 前置
 
-- Azure VM：Ubuntu 22.04/24.04（其他 Linux 亦可），有 SSH 登入。
-- 本機（你的開發機）：`rsync`、`ssh` 已安裝。
+- Azure 訂閱 + [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)（`az login`）。
+- [Terraform](https://developer.hashicorp.com/terraform/install) ≥ 1.0。
+- 本機（你的開發機）：`rsync`、`ssh`、SSH 金鑰（`~/.ssh/id_rsa.pub`）。
 
-## 步驟
+---
 
-### 1. VM 首次初始化（在 VM 上跑一次）
+## A. Terraform 佈建（推薦）
 
-```bash
-# 把 bootstrap.sh 複製到 VM 或用 scp，然後：
-bash bootstrap.sh
-# 重新登入讓 docker 群組生效
-```
-
-### 2. 在 VM 上準備環境檔
+Terraform 會自動建立：資源群組、VNet/子網路、NSG、公用 IP、Ubuntu 22.04 VM，
+並用 cloud-init 在 VM 開機時裝好 Docker。
 
 ```bash
-cd ~/aev-v2c                       # deploy.sh 會把專案同步到這裡
-cp deploy/azure/.env.production.example deploy/azure/.env.production
-# 編輯，至少改：POSTGRES_PASSWORD、SECRET_KEY（openssl rand -hex 32）、API keys
+cd deploy/azure/terraform
+
+# 1. 準備變數
+cp terraform.tfvars.example terraform.tfvars
+#    編輯：location、admin_username、ssh_public_key_path、
+#    ssh_source_cidr（建議改成自己的對外 IP，例如 1.2.3.4/32）
+
+# 2. 登入 Azure
+az login
+
+# 3. 佈建
+terraform init
+terraform plan          # 預覽會建立的資源
+terraform apply         # 輸入 yes 確認
+
+# 4. 取得 VM IP
+terraform output vm_public_ip
 ```
 
-### 3. 從本機部署
+> ⚠️ `terraform.tfvars` 與 `terraform.tfstate` 可能含機敏資訊，已在 `.gitignore` 防護，勿 commit。
+
+## B. 部署應用程式（兩種方式共用）
+
+佈建完 VM（或手動建好 VM）後，從本機部署程式碼：
 
 ```bash
 cd <專案根目錄>
+
+# 1. 在 VM 上準備環境檔（第一次）
+ssh azureuser@<VM_IP> "mkdir -p ~/aev-v2c && cd ~/aev-v2c 2>/dev/null; exit 0"
+#   先跑一次 deploy.sh，它會把專案 rsync 上去；或手動：
+#   rsync -az --exclude .git --exclude venv ./ azureuser@<VM_IP>:~/aev-v2c/
+ssh azureuser@<VM_IP> "cd ~/aev-v2c && cp deploy/azure/.env.production.example deploy/azure/.env.production"
+#   編輯 ~/aev-v2c/deploy/azure/.env.production：
+#   至少改 POSTGRES_PASSWORD、SECRET_KEY（openssl rand -hex 32）、API keys
+
+# 2. 部署
 deploy/azure/deploy.sh <VM_IP> azureuser
 ```
 
-之後每次改完程式碼，重跑同一行即可（rsync 同步 + rebuild）。
+之後每次改完程式碼，重跑 `deploy/azure/deploy.sh <VM_IP> azureuser` 即可（rsync 同步 + rebuild）。
 
 ## 存取
 

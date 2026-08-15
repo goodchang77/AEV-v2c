@@ -1,0 +1,12 @@
+# 複製為 terraform.tfvars 並填入你的值
+#   cp terraform.tfvars.example terraform.tfvars
+# ⚠️ terraform.tfvars 可能含機敏資訊，切勿 commit（.gitignore 已防護）
+
+project_name      = "aev"
+location          = "eastasia"        # 改成離你近的區域，例如 japaneast
+vm_size           = "Standard_B2s"
+admin_username    = "azureuser"
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# 建議改成你自己的對外 IP（例如 "123.45.67.89/32"），不要全開 SSH
+ssh_source_cidr   = "0.0.0.0/0"

@@ -23,6 +23,8 @@ Alpha Vantage_api key.txt
 *.tfplan
 deploy/gcp/terraform/tfplan
 .terraform/
+*.tfvars
+!*.tfvars.example
 
 # Kubernetes Secret（實際部署用 secret.example.yaml + 外部密鑰管理）
 deploy/kubernetes/base/secret.yaml
