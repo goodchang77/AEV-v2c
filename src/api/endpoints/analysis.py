@@ -28,6 +28,7 @@ from src.services.peer_analysis import (
 )
 from src.services.risk_assessment import RiskAssessmentEngine
 from src.services.valuation_models import DCFParameters, DCFValuationModel
+from src.services.data_service import CompanyDataService, FinancialDataService
 
 router = APIRouter()
 
@@ -44,9 +45,21 @@ def _to_industry_benchmark(d) -> IndustryBenchmark:
 
 @router.post("/dcf", response_model=StandardResponse)
 async def calculate_dcf_valuation(request: DCFValuationRequest):
-    """DCF 現金流折現評價（含敏感性分析）"""
-    if request.base_revenue is None:
-        raise HTTPException(status_code=422, detail="base_revenue 為必填（基期營收）")
+    """DCF 現金流折現評價（含敏感性分析；缺 base_revenue/shares 時自動由 DB 取得）"""
+    base_revenue = request.base_revenue
+    shares_outstanding = request.shares_outstanding
+
+    # 自動補齊基期營收與流通股數
+    if base_revenue is None or shares_outstanding is None:
+        statements = await FinancialDataService().get_latest_financial_statements(request.company_id)
+        if statements is None or not statements.revenue:
+            raise HTTPException(status_code=404, detail=f"找不到公司 {request.company_id} 的財務資料")
+        if base_revenue is None:
+            # DB 財務資料以「千元」為單位，DCF 模型以「元」為單位
+            base_revenue = statements.revenue * 1000
+        if shares_outstanding is None:
+            info = await CompanyDataService().get_company_basic_info(request.company_id)
+            shares_outstanding = (info or {}).get("outstanding_shares") or 1_000_000
 
     params = DCFParameters(
         forecast_years=request.forecast_years,
@@ -59,9 +72,9 @@ async def calculate_dcf_valuation(request: DCFValuationRequest):
         terminal_growth_rate=request.terminal_growth_rate,
     )
 
-    base_revenue = float(request.base_revenue)
+    base_revenue = float(base_revenue)
     net_debt = float(request.net_debt) if request.net_debt is not None else 0.0
-    shares_outstanding = request.shares_outstanding or 1_000_000
+    shares_outstanding = int(shares_outstanding or 1_000_000)
 
     model = DCFValuationModel(params)
     result = model.calculate_enterprise_value(base_revenue, net_debt, shares_outstanding)

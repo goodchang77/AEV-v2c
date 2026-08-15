@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>財務分析與企業評價系統</title>
+<style>
+  :root { --bg:#0f172a; --panel:#1e293b; --border:#334155; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --good:#4ade80; --warn:#facc15; --bad:#f87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { color:var(--muted); font-size:12px; }
+  .wrap { max-width:1100px; margin:0 auto; padding:20px; }
+  .searchbar { display:flex; gap:8px; margin-bottom:16px; }
+  input, select, button { background:#0b1120; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; }
+  input:focus { outline:1px solid var(--accent); }
+  button { background:var(--accent); color:#0b1120; font-weight:600; cursor:pointer; border:none; }
+  button:hover { filter:brightness(1.1); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .card h2 { font-size:14px; margin:0 0 12px; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:8px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { padding:6px 4px; text-align:left; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:500; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:13px; }
+  .kv b { color:var(--muted); font-weight:500; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+  .badge.good { background:var(--good); color:#0b1120; }
+  .badge.warn { background:var(--warn); color:#0b1120; }
+  .badge.bad { background:var(--bad); color:#0b1120; }
+  .muted { color:var(--muted); font-size:12px; }
+  .error { color:var(--bad); font-size:13px; }
+  ul { margin:6px 0; padding-left:18px; font-size:13px; }
+  li { margin:4px 0; }
+  form { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  form label { font-size:12px; color:var(--muted); }
+  form .full { grid-column:1 / -1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 財務分析與企業評價系統</h1>
+  <span class="sub">AEV-v2c · MVP Dashboard</span>
+</header>
+
+<div class="wrap">
+  <div class="searchbar">
+    <input id="q" placeholder="搜尋公司（代號或名稱，例如 2330 或 台積）" style="flex:1">
+    <button onclick="search()">搜尋</button>
+  </div>
+  <div class="searchbar">
+    <select id="companySelect" onchange="selectCompany(this.value)" style="flex:1">
+      <option value="">— 選擇公司 —</option>
+    </select>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>公司基本資料</h2><div id="companyInfo" class="kv muted">尚未選擇公司</div></div>
+    <div class="card"><h2>財務健康度</h2><div id="health" class="muted">尚未選擇公司</div></div>
+    <div class="card" style="grid-column:1 / -1"><h2>財務比率</h2><div id="ratios" class="muted">尚未選擇公司</div></div>
+    <div class="card"><h2>風險評估</h2><div id="risk" class="muted">尚未選擇公司</div></div>
+    <div class="card"><h2>DCF 估值</h2>
+      <form id="dcfForm" onsubmit="runDcf(event)" style="margin-bottom:12px">
+        <label>折現率 (0.01–0.30)<input id="dcf_rate" type="number" step="0.01" value="0.10"></label>
+        <label>終值成長率 (0–0.10)<input id="dcf_g" type="number" step="0.01" value="0.03"></label>
+        <label class="full">成長率（逗號分隔）<input id="dcf_growth" value="0.10, 0.08, 0.06, 0.05, 0.04"></label>
+        <button class="full" type="submit">執行 DCF</button>
+      </form>
+      <div id="dcf" class="muted"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "/api/v1";
+const $ = (id) => document.getElementById(id);
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) {
+    const b = await r.json().catch(() => ({}));
+    throw new Error(b.detail?.message || b.detail || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+function fmt(n, d=2) {
+  if (n === null || n === undefined) return "—";
+  return Number(n).toLocaleString("zh-TW", { maximumFractionDigits: d });
+}
+
+async function search() {
+  const kw = $("q").value.trim();
+  if (!kw) return;
+  const res = await api(`/companies/search?keyword=${encodeURIComponent(kw)}`);
+  const list = res.data || [];
+  const sel = $("companySelect");
+  sel.innerHTML = '<option value="">— 選擇公司 —</option>' +
+    list.map(c => `<option value="${c.company_id}">${c.company_id} ${c.company_name}（${c.market_type || ""}）</option>`).join("");
+  if (list.length === 1) selectCompany(list[0].company_id);
+}
+
+async function selectCompany(id) {
+  if (!id) return;
+  try {
+    await loadCompany(id);
+    await loadHealth(id);
+    await loadRatios(id);
+    await loadRisk(id);
+  } catch (e) {
+    document.querySelectorAll("#companyInfo,#health,#ratios,#risk").forEach(d => d.innerHTML = "");
+    $("companyInfo").innerHTML = `<span class="error">${e.message}</span>`;
+  }
+}
+
+async function loadCompany(id) {
+  const r = await api(`/companies/${id}`);
+  const c = r.data || {};
+  $("companyInfo").innerHTML = `
+    <b>代號</b><span>${c.company_id}</span>
+    <b>名稱</b><span>${c.company_name}</span>
+    <b>產業</b><span>${c.industry_name || c.industry_code || "—"}</span>
+    <b>市場</b><span>${c.market_type || "—"}</span>
+    <b>上市日</b><span>${c.listing_date || "—"}</span>
+    <b>資本額</b><span>${fmt(c.capital_amount)}</span>`;
+}
+
+async function loadHealth(id) {
+  const r = await api(`/financials/${id}/health`);
+  const d = r.data || {};
+  const cls = (d.overall_grade === "優秀" || d.overall_grade === "良好") ? "good" : (d.overall_grade === "不佳" || d.overall_grade === "危險") ? "bad" : "warn";
+  $("health").innerHTML = `
+    <div style="font-size:26px;font-weight:700;margin-bottom:8px">${fmt(d.overall_score)} <span style="font-size:14px">/ 100</span></div>
+    <span class="badge ${cls}">${d.overall_grade || "—"}</span>
+    <div class="kv" style="margin-top:10px">
+      ${Object.entries(d.detailed_scores || {}).map(([k,v]) => `<b>${k}</b><span>${fmt(v)}</span>`).join("")}
+    </div>
+    ${(d.strengths || []).length ? "<ul>" + d.strengths.map(s => `<li>✅ ${s}</li>`).join("") + "</ul>" : ""}
+    ${(d.recommendations || []).length ? "<ul>" + d.recommendations.map(s => `<li>💡 ${s}</li>`).join("") + "</ul>" : ""}`;
+}
+
+async function loadRatios(id) {
+  const r = await api(`/financials/${id}/ratios`);
+  const d = r.data || {};
+  const rows = [
+    ["負債比率", "debt_to_asset_ratio"], ["流動比率", "current_ratio"], ["速動比率", "quick_ratio"],
+    ["ROA", "roa"], ["ROE", "roe"], ["ROIC", "roic"], ["毛利率", "gross_margin"],
+    ["營業利益率", "operating_margin"], ["淨利率", "net_margin"], ["本益比", "pe_ratio"],
+    ["股價淨值比", "pb_ratio"], ["EV/EBITDA", "ev_ebitda"],
+  ];
+  $("ratios").innerHTML = `<div class="muted">期別：${r.year_quarter || "latest"}</div>
+    <table><tr>${rows.map(([k]) => `<th>${k}</th>`).join("")}</tr>
+    <tr>${rows.map(([,k]) => `<td>${d[k] !== null && d[k] !== undefined ? (d[k] > 1 && ["pe_ratio","pb_ratio","ev_ebitda","current_ratio","quick_ratio"].includes(k) ? fmt(d[k]) : (d[k]*100).toFixed(2)+"%") : "—"}</td>`).join("")}</tr></table>`;
+}
+
+async function loadRisk(id) {
+  const r = await api("/analysis/risk-assessment", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ company_id: id }) });
+  const d = r.data || {};
+  const b = d.risk_breakdown || {};
+  const distress = b.financial_distress || {};
+  $("risk").innerHTML = `
+    <div style="font-size:26px;font-weight:700">${fmt(d.overall_risk_score)}</div>
+    <span class="badge ${(d.risk_grade === "A" || d.risk_grade === "B") ? "good" : (d.risk_grade === "F" ? "bad" : "warn")}">${d.risk_grade || "—"} · ${d.risk_level || "—"}</span>
+    <div class="kv" style="margin-top:10px"><b>Altman Z-Score</b><span>${fmt(distress.z_score)}</span></div>
+    ${(d.key_concerns || []).length ? "<ul>" + d.key_concerns.map(c => `<li>⚠️ ${c}</li>`).join("") + "</ul>" : ""}`;
+}
+
+async function runDcf(e) {
+  e.preventDefault();
+  const id = $("companySelect").value;
+  if (!id) { $("dcf").innerHTML = '<span class="error">請先選擇公司</span>'; return; }
+  const growth = $("dcf_growth").value.split(",").map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+  try {
+    const body = {
+      company_id: id,
+      discount_rate: parseFloat($("dcf_rate").value),
+      terminal_growth_rate: parseFloat($("dcf_g").value),
+      revenue_growth_rates: growth,
+      ebitda_margin: 0.15, tax_rate: 0.25, capex_rate: 0.04, working_capital_rate: 0.02,
+      sensitivity_analysis: true,
+    };
+    const r = await api("/analysis/dcf", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+    const d = (r.data || {}).valuation || {};
+    $("dcf").innerHTML = `
+      <div style="font-size:24px;font-weight:700">公允價值每股 <span style="color:var(--good)">${fmt(d.fair_value_per_share)} 元</span></div>
+      <div class="kv" style="margin-top:8px">
+        <b>企業價值</b><span>${fmt(d.enterprise_value)}</span>
+        <b>股權價值</b><span>${fmt(d.equity_value)}</span>
+        <b>當前股價</b><span>${fmt(d.current_price)}</span>
+        <b>上漲空間</b><span>${d.upside_downside !== null && d.upside_downside !== undefined ? fmt(d.upside_downside) + "%" : "—"}</span>
+        <b>終值占比</b><span>${d.terminal_value_percentage !== null && d.terminal_value_percentage !== undefined ? fmt(d.terminal_value_percentage) + "%" : "—"}</span>
+      </div>`;
+  } catch (err) {
+    $("dcf").innerHTML = `<span class="error">${err.message}</span>`;
+  }
+}
+
+// 預設載入台積電
+window.addEventListener("DOMContentLoaded", () => { $("q").value = "2330"; selectCompany("2330"); });
+</script>
+</body>
+</html>
