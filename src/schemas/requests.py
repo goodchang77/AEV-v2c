@@ -357,3 +357,69 @@ class SystemHealthRequest(BaseModel):
             if check_type not in valid_types:
                 raise ValueError(f"無效的檢查類型: {check_type}")
         return v
+
+
+# ================== 風險評估請求模型 ==================
+
+class RiskAssessmentRequest(BaseModel):
+    """綜合風險評估請求"""
+    company_id: str = Field(..., pattern=r"^\d{4}$", description="公司代碼")
+    assessment_scope: Optional[List[str]] = Field(
+        None,
+        description="評估範圍，例如 ['financial_distress', 'liquidity', 'profitability', 'leverage']",
+    )
+
+
+# ================== 同業比較（顯式資料）請求模型 ==================
+
+class PeerCompanyDataInput(BaseModel):
+    """同業公司資料輸入（用於顯式同業比較）"""
+    company_id: str = Field(..., description="公司代碼")
+    company_name: str = Field(..., description="公司名稱")
+    market_cap: float = Field(..., description="市值")
+    revenue: float = Field(..., description="營收")
+    net_income: float = Field(..., description="淨利")
+    total_assets: float = Field(..., description="總資產")
+    shareholders_equity: float = Field(..., description="股東權益")
+    roe: float = Field(..., description="ROE")
+    roa: float = Field(..., description="ROA")
+    current_ratio: float = Field(..., description="流動比率")
+    debt_ratio: float = Field(..., description="負債比率")
+    net_margin: float = Field(..., description="淨利率")
+    pe_ratio: Optional[float] = Field(None, description="本益比")
+    pb_ratio: Optional[float] = Field(None, description="股價淨值比")
+    ev_ebitda: Optional[float] = Field(None, description="EV/EBITDA")
+
+
+class IndustryBenchmarkInput(BaseModel):
+    """產業基準資料輸入"""
+    industry_code: str = Field(..., description="產業代碼")
+    industry_name: str = Field(..., description="產業名稱")
+    company_count: int = Field(..., description="產業內公司數量")
+    avg_roe: float
+    avg_roa: float
+    avg_current_ratio: float
+    avg_debt_ratio: float
+    avg_gross_margin: float
+    avg_net_margin: float
+    avg_pe_ratio: float
+    avg_pb_ratio: float
+    median_roe: float
+    median_roa: float
+    median_current_ratio: float
+    median_debt_ratio: float
+    roe_25_percentile: float
+    roe_75_percentile: float
+    pe_25_percentile: float
+    pe_75_percentile: float
+    debt_25_percentile: float
+    debt_75_percentile: float
+    roe_std_dev: float
+    roa_std_dev: float
+
+
+class PeerComparisonDataRequest(BaseModel):
+    """同業比較分析請求（顯式提供目標公司、同業與產業基準資料）"""
+    target: PeerCompanyDataInput = Field(..., description="目標公司資料")
+    peers: List[PeerCompanyDataInput] = Field(..., min_length=1, description="同業公司列表")
+    industry_benchmark: IndustryBenchmarkInput = Field(..., description="產業基準")

@@ -201,7 +201,7 @@ class TrendData(BaseModel):
 
 class FinancialTrendResponse(BaseResponse):
     """財務趨勢響應"""
-    data: Dict[str, List[TrendData]]
+    data: Dict[str, Any] = Field(..., description="財務趨勢資料（含比率/報表趨勢、成長分析與摘要）")
     company_id: str
     periods_analyzed: int
 

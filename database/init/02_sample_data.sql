@@ -161,7 +161,8 @@ GROUP BY role;
 -- =====================================================
 
 -- 記錄初始化時間
+-- 注意: market_type 受 CHECK 約束 (上市/上櫃/興櫃)，故標記列使用 '上市'
 INSERT INTO companies (company_id, company_name, industry_code, market_type, is_active)
-VALUES ('INIT', 'System Initialized', 'SYSTEM', 'SYSTEM', false)
+VALUES ('INIT', 'System Initialized', 'SYSTEM', '上市', false)
 ON CONFLICT (company_id) DO UPDATE SET 
 updated_at = CURRENT_TIMESTAMP;

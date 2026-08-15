@@ -13,7 +13,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from src.mcp_server.server import MCPServer
 from src.mcp_server.tools import ToolResponse
 from src.ai_agent.agent import FinancialAnalystAgent, AgentRole, TaskType
-from src.core.database import get_db
+from src.core.database import get_sync_session
 
 
 # ===== Fixtures =====
@@ -28,8 +28,8 @@ def event_loop():
 
 @pytest.fixture
 def db_session():
-    """測試用資料庫 session"""
-    db = next(get_db())
+    """測試用資料庫 session（同步 session，連線為惰性建立）"""
+    db = get_sync_session()
     try:
         yield db
     finally:

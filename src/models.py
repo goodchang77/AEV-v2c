@@ -5,12 +5,16 @@ Database Models
 定義所有資料表的 SQLAlchemy 模型
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Decimal, Text, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey, Index, Numeric
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
+
+# SQLAlchemy 2.x 未在頂層提供 Decimal 型別；DECIMAL 欄位以 Numeric 表示。
+# 保留 Decimal 別名以最小化對既有 Column(Decimal(...)) 宣告的改動。
+Decimal = Numeric
 
 Base = declarative_base()
 

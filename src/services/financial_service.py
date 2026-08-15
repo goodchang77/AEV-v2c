@@ -352,7 +352,7 @@ class FinancialDataService:
                         net_margin,
                         current_ratio,
                         debt_to_asset_ratio,
-                        calculated_at
+                        calculation_date
                     FROM financial_ratios 
                     WHERE company_id = :company_id
                     ORDER BY year_quarter DESC
@@ -893,37 +893,37 @@ class FinancialDataService:
         self, 
         health_scores: Dict[str, float], 
         ratios: Dict[str, Any]
-    ) -> List[str]:
-        """產生評估詳情"""
-        details = []
+    ) -> Dict[str, str]:
+        """產生評估詳情（依類別分類的字典，符合 FinancialHealthAssessment schema）"""
+        details = {}
         
         # 獲利能力評估
         profit_score = health_scores.get("profitability", 0)
         roe = ratios.get("roe")
         if profit_score >= 80:
-            details.append("獲利能力表現優異")
+            details["獲利能力"] = "獲利能力表現優異"
         elif profit_score >= 60:
-            details.append("獲利能力表現良好")
+            details["獲利能力"] = "獲利能力表現良好"
         else:
-            details.append("獲利能力有待改善")
+            details["獲利能力"] = "獲利能力有待改善"
         
         # 流動性評估
         liquidity_score = health_scores.get("liquidity", 0)
         if liquidity_score >= 80:
-            details.append("流動性充足")
+            details["流動性"] = "流動性充足"
         elif liquidity_score >= 60:
-            details.append("流動性適中")
+            details["流動性"] = "流動性適中"
         else:
-            details.append("流動性風險需注意")
+            details["流動性"] = "流動性風險需注意"
         
         # 槓桿評估
         leverage_score = health_scores.get("leverage", 0)
         if leverage_score >= 80:
-            details.append("財務結構穩健")
+            details["槓桿"] = "財務結構穩健"
         elif leverage_score >= 60:
-            details.append("負債水準可控")
+            details["槓桿"] = "負債水準可控"
         else:
-            details.append("槓桿風險偏高")
+            details["槓桿"] = "槓桿風險偏高"
         
         return details
     

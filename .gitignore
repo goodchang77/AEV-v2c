@@ -42,6 +42,9 @@ env/
 __pycache__/
 *.pyc
 
+# 本地工具快取
+.uvtools/
+
 # --- Java/其他 ---
 target/
 bin/

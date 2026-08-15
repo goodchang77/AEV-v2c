@@ -4,7 +4,7 @@ API Routes Definition
 """
 
 from fastapi import APIRouter
-from src.api.endpoints import companies, financials, ratios, auth, health, market_data, market_data_v2, document_upload, agent
+from src.api.endpoints import companies, financials, ratios, auth, health, market_data, market_data_v2, document_upload, analysis, agent
 
 # 主要 API 路由器
 api_router = APIRouter()
@@ -62,4 +62,10 @@ api_router.include_router(
     agent.router,
     prefix="/agent",
     tags=["AI Agent"],
+)
+
+api_router.include_router(
+    analysis.router,
+    prefix="/analysis",
+    tags=["分析"],
 )

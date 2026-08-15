@@ -1,103 +1,125 @@
-# src/api/endpoints/analysis.py
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from src.core.database import get_db
-from src.services.risk_assessment import RiskAssessmentEngine
-from src.services.valuation_models import DCFValuationModel
-from src.services.peer_analysis import PeerAnalyzer
-from src.schemas.requests import DCFRequest, PeerComparisonRequest, RiskAssessmentRequest
-from src.schemas.responses import StandardResponse
+"""
+分析 API 端點
+Analysis API Endpoints
+=====================
 
-router = APIRouter(prefix="/api/v1/analysis", tags=["Analysis"])
+對齊真實服務層簽名的分析端點：
+- POST /analysis/dcf             DCF 現金流折現評價（無狀態，不需 DB）
+- POST /analysis/peer-comparison 同業比較（顯式提供資料，不需 DB）
+- POST /analysis/risk-assessment 綜合風險評估（DB-backed，需公司財務資料）
+"""
+
+from dataclasses import asdict
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException
+
+from src.core.exceptions import FinancialDataNotFoundError
+from src.schemas.requests import (
+    DCFValuationRequest,
+    PeerComparisonDataRequest,
+    RiskAssessmentRequest,
+)
+from src.schemas.responses import StandardResponse
+from src.services.peer_analysis import (
+    IndustryBenchmark,
+    PeerAnalyzer,
+    PeerCompanyData,
+)
+from src.services.risk_assessment import RiskAssessmentEngine
+from src.services.valuation_models import DCFParameters, DCFValuationModel
+
+router = APIRouter()
+
+
+def _to_peer_company(d) -> PeerCompanyData:
+    """將 Pydantic 輸入轉為 PeerCompanyData dataclass"""
+    return PeerCompanyData(**d.model_dump())
+
+
+def _to_industry_benchmark(d) -> IndustryBenchmark:
+    """將 Pydantic 輸入轉為 IndustryBenchmark dataclass"""
+    return IndustryBenchmark(**d.model_dump())
+
 
 @router.post("/dcf", response_model=StandardResponse)
-async def calculate_dcf_valuation(
-    request: DCFRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    DCF估值計算
-    
-    請求參數:
-    - company_id: 股票代號(4碼)
-    - revenue_growth_rates: 收入成長率預測(3-10年)
-    - terminal_growth_rate: 永續成長率(0-10%)
-    - discount_rate: 折現率(1-30%)
-    """
-    try:
-        model = DCFValuationModel(db)
-        result = model.calculate_enterprise_value(
-            company_id=request.company_id,
-            revenue_growth_rates=request.revenue_growth_rates,
-            terminal_growth_rate=request.terminal_growth_rate,
-            discount_rate=request.discount_rate
-        )
-        
-        # 敏感性分析
+async def calculate_dcf_valuation(request: DCFValuationRequest):
+    """DCF 現金流折現評價（含敏感性分析）"""
+    if request.base_revenue is None:
+        raise HTTPException(status_code=422, detail="base_revenue 為必填（基期營收）")
+
+    params = DCFParameters(
+        forecast_years=request.forecast_years,
+        revenue_growth_rates=request.revenue_growth_rates,
+        ebitda_margin=request.ebitda_margin,
+        tax_rate=request.tax_rate,
+        capex_rate=request.capex_rate,
+        working_capital_rate=request.working_capital_rate,
+        discount_rate=request.discount_rate,
+        terminal_growth_rate=request.terminal_growth_rate,
+    )
+
+    base_revenue = float(request.base_revenue)
+    net_debt = float(request.net_debt) if request.net_debt is not None else 0.0
+    shares_outstanding = request.shares_outstanding or 1_000_000
+
+    model = DCFValuationModel(params)
+    result = model.calculate_enterprise_value(base_revenue, net_debt, shares_outstanding)
+
+    sensitivity = None
+    if request.sensitivity_analysis:
         sensitivity = model.perform_sensitivity_analysis(
-            base_result=result,
-            discount_rate_range=(-0.02, 0.02),  # ±2%
-            growth_rate_range=(-0.01, 0.01)     # ±1%
+            base_revenue, net_debt, shares_outstanding
         )
-        
-        return StandardResponse(
-            success=True,
-            data={
-                "valuation": result,
-                "sensitivity_analysis": sensitivity
-            },
-            meta={
-                "company_id": request.company_id,
-                "model_type": "DCF",
-                "calculation_date": datetime.now().isoformat()
-            }
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+    return StandardResponse(
+        success=True,
+        data={"valuation": asdict(result), "sensitivity_analysis": sensitivity},
+        meta={
+            "company_id": request.company_id,
+            "model_type": "DCF",
+            "calculation_date": datetime.utcnow().isoformat(),
+        },
+    )
+
 
 @router.post("/peer-comparison", response_model=StandardResponse)
-async def peer_comparison_analysis(
-    request: PeerComparisonRequest,
-    db: Session = Depends(get_db)
-):
-    """同業比較分析"""
-    try:
-        analyzer = PeerAnalyzer(db)
-        result = analyzer.analyze_peer_comparison(
-            company_id=request.company_id,
-            peer_selection_method=request.peer_selection_method
-        )
-        
-        return StandardResponse(
-            success=True,
-            data=result,
-            meta={
-                "company_id": request.company_id,
-                "num_peers": len(result["peers"]),
-                "analysis_date": datetime.now().isoformat()
-            }
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def peer_comparison_analysis(request: PeerComparisonDataRequest):
+    """同業比較分析（顯式提供目標公司、同業與產業基準資料）"""
+    target = _to_peer_company(request.target)
+    peers = [_to_peer_company(p) for p in request.peers]
+    benchmark = _to_industry_benchmark(request.industry_benchmark)
+
+    analyzer = PeerAnalyzer()
+    result = analyzer.analyze_peer_comparison(target, peers, benchmark)
+    report = analyzer.generate_peer_comparison_report(result)
+
+    return StandardResponse(
+        success=True,
+        data=report,
+        meta={
+            "company_id": target.company_id,
+            "num_peers": len(peers),
+            "analysis_date": datetime.utcnow().isoformat(),
+        },
+    )
+
 
 @router.post("/risk-assessment", response_model=StandardResponse)
-async def risk_assessment(
-    request: RiskAssessmentRequest,
-    db: Session = Depends(get_db)
-):
-    """綜合風險評估"""
+async def risk_assessment(request: RiskAssessmentRequest):
+    """綜合風險評估（需資料庫中的公司財務資料）"""
     try:
-        engine = RiskAssessmentEngine(db)
+        engine = RiskAssessmentEngine()
         result = engine.assess_overall_risk(company_id=request.company_id)
-        
-        return StandardResponse(
-            success=True,
-            data=result,
-            meta={
-                "company_id": request.company_id,
-                "assessment_date": datetime.now().isoformat(),
-                "risk_grade": result["risk_grade"]
-            }
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except FinancialDataNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=exc.message)
+
+    return StandardResponse(
+        success=True,
+        data=result,
+        meta={
+            "company_id": request.company_id,
+            "assessment_date": datetime.utcnow().isoformat(),
+            "risk_grade": result.get("risk_grade"),
+        },
+    )

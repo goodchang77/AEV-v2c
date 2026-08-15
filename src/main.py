@@ -130,7 +130,7 @@ async def logging_middleware(request: Request, call_next):
 async def financial_analysis_exception_handler(request: Request, exc: FinancialAnalysisException):
     """財務分析系統自定義異常處理"""
     logger.error(
-        f"Financial Analysis Exception: {exc.detail}",
+        f"Financial Analysis Exception: {exc.message}",
         extra={
             "error_code": exc.error_code,
             "url": str(request.url),

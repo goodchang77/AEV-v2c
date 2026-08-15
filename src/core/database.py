@@ -168,15 +168,19 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def create_tables():
-    """創建資料庫表格"""
+    """驗證資料庫連線（實際建表由 database/init/*.sql 於容器初始化時完成）
+
+    啟動階段若資料庫尚未就緒，不應阻止應用程式啟動：
+    僅記錄警告，讓無狀態端點（/health、/analysis/dcf、/analysis/peer-comparison）
+    仍可正常服務；需要 DB 的端點會在請求時各自回報錯誤。
+    """
     try:
         async with engine.begin() as conn:
             # 這裡可以執行創建表格的 SQL
             # 實際的表格創建在 database/init/01_create_tables.sql 中
             logger.info("Database tables creation verified")
     except Exception as e:
-        logger.error(f"Failed to create tables: {e}")
-        raise
+        logger.warning(f"Database not available at startup (tables are created by init SQL): {e}")
 
 
 class DatabaseHealthCheck:
