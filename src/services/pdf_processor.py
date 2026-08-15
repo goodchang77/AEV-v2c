@@ -416,13 +416,13 @@ class FinancialPDFProcessor:
             return ""
         
         # 移除多餘的空白和換行
-        cleaned = re.sub(r'\\s+', ' ', text.strip())
+        cleaned = re.sub(r'\s+', ' ', text.strip())
         
         # 統一數字格式（移除不必要的空格）
-        cleaned = re.sub(r'(\\d)\\s+(\\d)', r'\\1\\2', cleaned)
+        cleaned = re.sub(r'(\d)\s+(\d)', r'\1\2', cleaned)
         
         # 統一負數表示（括號轉換為負號）
-        cleaned = re.sub(r'\\((\\d[\\d,]*(?:\\.\\d+)?)\\)', r'-\\1', cleaned)
+        cleaned = re.sub(r'\((\d[\d,]*(?:\.\d+)?)\)', r'-\1', cleaned)
         
         return cleaned
     

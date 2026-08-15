@@ -136,6 +136,7 @@ class TestPDFProcessingE2E:
         mock_page = mock_pdf.pages[0]
         mock_page.extract_text.return_value = realistic_pdf_content.decode('utf-8')
         mock_page.extract_tables.return_value = []
+        mock_pdf.pages = [mock_page]
         
         # 1. 上傳文件
         response = client.post(

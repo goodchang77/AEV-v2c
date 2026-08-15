@@ -174,7 +174,7 @@ class TestDocumentUploadAPI:
         
         assert response.status_code == 400
         data = response.json()
-        assert "僅支援PDF格式文件" in data["detail"]
+        assert "僅支援 PDF 或 Excel" in data["detail"]
 
     def test_upload_empty_file(self, client):
         """測試上傳空文件"""
@@ -211,9 +211,10 @@ class TestDocumentUploadAPI:
             data={"async_processing": "false"}
         )
         
-        assert response.status_code == 400
+        # 空檔名會在抵達端點前被 FastAPI 的上傳驗證攔截，回 422
+        assert response.status_code == 422
         data = response.json()
-        assert "請提供有效的檔案名稱" in data["detail"]
+        assert "detail" in data
 
     def test_upload_invalid_company_id(self, client, sample_pdf_file):
         """測試上傳無效公司代碼"""
@@ -256,7 +257,7 @@ class TestDocumentUploadAPI:
         # 應該返回500錯誤
         assert response.status_code == 500
         data = response.json()
-        assert data["error"]["code"] == "PDF_PROCESSING_FAILED"
+        assert data["error"]["code"] == "DOCUMENT_PROCESSING_FAILED"
 
     def test_get_processing_status_success(self, client):
         """測試查詢處理狀態成功"""
