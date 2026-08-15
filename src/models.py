@@ -5,10 +5,10 @@ Database Models
 定義所有資料表的 SQLAlchemy 模型
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey, Index, Numeric
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Date, DateTime, Text, ForeignKey, Index, Numeric
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from datetime import datetime
 
@@ -31,7 +31,7 @@ class Company(Base):
     market_type = Column(String(20), nullable=False, index=True)
     listing_date = Column(Date)
     capital_amount = Column(Decimal(15, 2))
-    outstanding_shares = Column(Integer)
+    outstanding_shares = Column(BigInteger)
     par_value = Column(Decimal(8, 2))
     address = Column(Text)
     website = Column(String(200))
@@ -244,14 +244,22 @@ class User(Base):
     """用戶表"""
     __tablename__ = "users"
     
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(20), default='user')  # admin/analyst/user
+    full_name = Column(String(100))
+    role = Column(String(20), default='user')  # admin/analyst/user/readonly
+    permissions = Column(JSONB, default=dict)
     is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
     last_login = Column(DateTime)
+    login_count = Column(Integer, default=0)
+    timezone = Column(String(50), default='Asia/Taipei')
+    language = Column(String(10), default='zh-TW')
+    preferences = Column(JSONB, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # 關聯
     watchlists = relationship("UserWatchlist", back_populates="user")
@@ -261,9 +269,12 @@ class UserWatchlist(Base):
     """用戶關注清單表"""
     __tablename__ = "user_watchlists"
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)
     company_id = Column(String(10), ForeignKey("companies.company_id"), nullable=False)
+    watchlist_name = Column(String(50), default='default')
+    notes = Column(Text)
+    priority = Column(Integer, default=0)  # 0=normal, 1=high, -1=low
     added_at = Column(DateTime, default=datetime.utcnow)
     
     # 關聯
@@ -272,5 +283,62 @@ class UserWatchlist(Base):
     
     # 複合唯一索引
     __table_args__ = (
-        Index('idx_user_watchlist_unique', 'user_id', 'company_id', unique=True),
+        Index('idx_user_watchlist_unique', 'user_id', 'company_id', 'watchlist_name', unique=True),
+    )
+
+
+class ValuationResult(Base):
+    """評價模型結果表"""
+    __tablename__ = "valuation_results"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(String(10), ForeignKey("companies.company_id"), nullable=False, index=True)
+    valuation_date = Column(Date, nullable=False)
+    model_type = Column(String(50), nullable=False)  # DCF/DDM/PE/PB/EV_EBITDA
+    
+    # 評價參數
+    discount_rate = Column(Decimal(8, 4))
+    growth_rate = Column(Decimal(8, 4))
+    terminal_value = Column(Decimal(15, 2))
+    
+    # 評價結果
+    fair_value = Column(Decimal(12, 2))
+    current_price = Column(Decimal(8, 2))
+    upside_downside = Column(Decimal(8, 4))
+    
+    # 敏感性分析與假設
+    sensitivity_analysis = Column(JSONB)
+    assumptions = Column(JSONB)
+    
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # 關聯
+    company = relationship("Company")
+    
+    __table_args__ = (
+        Index('idx_valuation_company_date', 'company_id', 'valuation_date'),
+    )
+
+
+class StockPrice(Base):
+    """股價資料表"""
+    __tablename__ = "stock_prices"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(String(10), ForeignKey("companies.company_id"), nullable=False, index=True)
+    trade_date = Column(Date, nullable=False)
+    open_price = Column(Decimal(8, 2))
+    high_price = Column(Decimal(8, 2))
+    low_price = Column(Decimal(8, 2))
+    close_price = Column(Decimal(8, 2))
+    volume = Column(BigInteger)
+    adj_close = Column(Decimal(8, 2))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # 關聯
+    company = relationship("Company")
+    
+    __table_args__ = (
+        Index('idx_stock_prices_company_date', 'company_id', 'trade_date'),
     )

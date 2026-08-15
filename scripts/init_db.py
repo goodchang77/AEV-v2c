@@ -232,29 +232,34 @@ def main() -> int:
     # 1. 建表（若不存在）
     cur.execute("SELECT to_regclass('public.companies')")
     if cur.fetchone()[0] is None:
-        print("[1/3] 建立資料表...")
+        print("[1/4] 建立資料表...")
         _apply_sql_file(cur, PROJECT_ROOT / "database" / "init" / "01_create_tables.sql")
     else:
-        print("[1/3] 資料表已存在，略過建表")
+        print("[1/4] 資料表已存在，略過建表")
 
     # 2. 種子資料（若 companies 為空）
     cur.execute("SELECT count(*) FROM companies")
     company_count = cur.fetchone()[0]
     if company_count == 0:
-        print("[2/3] 載入種子資料...")
+        print("[2/4] 載入種子資料...")
         _apply_sql_file(cur, PROJECT_ROOT / "database" / "init" / "02_sample_data.sql")
     else:
-        print(f"[2/3] companies 已有 {company_count} 筆，略過種子資料")
+        print(f"[2/4] companies 已有 {company_count} 筆，略過種子資料")
 
-    # 3. 財務報表 + 比率
-    print("[3/3] 插入範例財務資料...")
+    # 3. 追加資料表（評價/股價，冪等可重跑）
+    print("[3/4] 建立評價/股價資料表...")
+    _apply_sql_file(cur, PROJECT_ROOT / "database" / "init" / "03_valuation_and_stock.sql")
+
+    # 4. 財務報表 + 比率
+    print("[4/4] 插入範例財務資料...")
     _insert_financial_statements(cur)
     _insert_financial_ratios(cur)
 
-    # 4. 彙總
+    # 5. 彙總
     print("-" * 60)
     for t in ("companies", "financial_statements", "financial_ratios",
-              "industry_benchmarks", "users", "user_watchlists"):
+              "industry_benchmarks", "users", "user_watchlists",
+              "valuation_results", "stock_prices"):
         cur.execute(f"SELECT count(*) FROM {t}")
         print(f"    {t}: {cur.fetchone()[0]} 筆")
 
