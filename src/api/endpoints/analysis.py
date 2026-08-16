@@ -12,8 +12,10 @@ Analysis API Endpoints
 from dataclasses import asdict
 from datetime import datetime
 import statistics
+from typing import List
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from src.core.exceptions import FinancialDataNotFoundError
 from src.schemas.requests import (
@@ -242,4 +244,33 @@ async def risk_assessment(request: RiskAssessmentRequest):
             "assessment_date": datetime.utcnow().isoformat(),
             "risk_grade": result.get("risk_grade"),
         },
+    )
+
+
+class BacktestRequest(BaseModel):
+    """回測請求（顯式提供價格序列，無狀態）"""
+
+    prices: List[float] = Field(..., min_length=30, description="收盤價序列（由舊到新）")
+    strategy: str = Field("sma_crossover", description="sma_crossover / buy_and_hold")
+    fast_period: int = Field(20, ge=2, le=250)
+    slow_period: int = Field(50, ge=3, le=250)
+    initial_capital: float = Field(1_000_000, gt=0)
+
+
+@router.post("/backtest", response_model=StandardResponse)
+def backtest(request: BacktestRequest):
+    """歷史回測（SMA 交叉策略或買進持有）"""
+    from src.services.backtest import run_buy_and_hold, run_sma_crossover_backtest
+
+    if request.strategy == "buy_and_hold":
+        result = run_buy_and_hold(request.prices, request.initial_capital)
+    else:
+        result = run_sma_crossover_backtest(
+            request.prices, request.fast_period, request.slow_period, request.initial_capital
+        )
+
+    return StandardResponse(
+        success=True,
+        data=result,
+        meta={"strategy": request.strategy, "data_points": len(request.prices)},
     )

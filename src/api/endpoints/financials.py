@@ -101,6 +101,58 @@ async def get_financial_trend(
         raise HTTPException(status_code=500, detail="財務趨勢分析服務暫時不可用")
 
 
+@router.get("/outliers")
+async def get_ratio_outliers(threshold: float = Query(2.5, ge=0.5, description="z-score 門檻")):
+    """異常值檢測：跨公司財務比率 z-score 超出門檻者（資料品質監控）"""
+    from sqlalchemy import text
+
+    from src.core.database import get_async_session
+    from src.schemas.responses import StandardResponse
+
+    query = text(
+        """
+        WITH latest AS (
+            SELECT DISTINCT ON (company_id)
+                company_id, roe, current_ratio, debt_to_asset_ratio
+            FROM financial_ratios
+            ORDER BY company_id, year_quarter DESC
+        ),
+        stats AS (
+            SELECT avg(roe) AS m_roe, stddev(roe) AS s_roe,
+                   avg(current_ratio) AS m_cr, stddev(current_ratio) AS s_cr,
+                   avg(debt_to_asset_ratio) AS m_debt, stddev(debt_to_asset_ratio) AS s_debt
+            FROM latest
+        )
+        SELECT l.company_id, c.company_name, l.roe, l.current_ratio, l.debt_to_asset_ratio,
+               round((l.roe - s.m_roe) / nullif(s.s_roe, 0), 2) AS roe_z,
+               round((l.current_ratio - s.m_cr) / nullif(s.s_cr, 0), 2) AS current_ratio_z,
+               round((l.debt_to_asset_ratio - s.m_debt) / nullif(s.s_debt, 0), 2) AS debt_z
+        FROM latest l
+        JOIN companies c ON c.company_id = l.company_id
+        CROSS JOIN stats s
+        ORDER BY company_id
+        """
+    )
+
+    async with get_async_session() as session:
+        result = await session.execute(query)
+        rows = [dict(r) for r in result.mappings().all()]
+
+    flagged = [
+        r
+        for r in rows
+        if abs(r["roe_z"] or 0) > threshold
+        or abs(r["current_ratio_z"] or 0) > threshold
+        or abs(r["debt_z"] or 0) > threshold
+    ]
+
+    return StandardResponse(
+        success=True,
+        data={"total_companies": len(rows), "flagged_count": len(flagged), "flagged": flagged},
+        meta={"threshold": threshold},
+    )
+
+
 @router.post("/{company_id}/ratios/calculate")
 async def calculate_financial_ratios(
     company_id: str = Path(..., pattern=r"^\d{4}$")
