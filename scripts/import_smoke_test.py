@@ -56,6 +56,7 @@ MODULES = [
     # services - file processing
     "src.services.excel_processor",
     "src.services.pdf_processor",
+    "src.services.monte_carlo",
     # MCP & AI agent
     "src.mcp_server.tools",
     "src.mcp_server.server",
@@ -72,6 +73,7 @@ MODULES = [
     "src.api.endpoints.document_upload",
     "src.api.endpoints.analysis",
     "src.api.endpoints.agent",
+    "src.api.endpoints.valuation",
     # api routes + app entry
     "src.api.routes",
     "src.api.main",
