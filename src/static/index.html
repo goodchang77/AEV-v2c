@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>財務分析與企業評價系統</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
   :root { --bg:#0f172a; --panel:#1e293b; --border:#334155; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --good:#4ade80; --warn:#facc15; --bad:#f87171; }
   * { box-sizing: border-box; }
@@ -20,6 +21,7 @@
   .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
   .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
   .card h2 { font-size:14px; margin:0 0 12px; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:8px; }
+  .card.wide { grid-column:1 / -1; }
   table { width:100%; border-collapse:collapse; font-size:13px; }
   td, th { padding:6px 4px; text-align:left; border-bottom:1px solid var(--border); }
   th { color:var(--muted); font-weight:500; }
@@ -36,6 +38,7 @@
   form { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   form label { font-size:12px; color:var(--muted); }
   form .full { grid-column:1 / -1; }
+  .chart { width:100%; height:280px; }
 </style>
 </head>
 <body>
@@ -58,8 +61,14 @@
   <div class="grid">
     <div class="card"><h2>公司基本資料</h2><div id="companyInfo" class="kv muted">尚未選擇公司</div></div>
     <div class="card"><h2>財務健康度</h2><div id="health" class="muted">尚未選擇公司</div></div>
-    <div class="card" style="grid-column:1 / -1"><h2>財務比率</h2><div id="ratios" class="muted">尚未選擇公司</div></div>
+
+    <div class="card wide"><h2>財務比率</h2><div id="ratios" class="muted">尚未選擇公司</div></div>
+
+    <div class="card wide"><h2>營收與獲利趨勢</h2><div id="trendChart" class="chart"></div><div id="trendNote" class="muted"></div></div>
+
     <div class="card"><h2>風險評估</h2><div id="risk" class="muted">尚未選擇公司</div></div>
+    <div class="card"><h2>風險雷達圖</h2><div id="riskChart" class="chart"></div></div>
+
     <div class="card"><h2>DCF 估值</h2>
       <form id="dcfForm" onsubmit="runDcf(event)" style="margin-bottom:12px">
         <label>折現率 (0.01–0.30)<input id="dcf_rate" type="number" step="0.01" value="0.10"></label>
@@ -69,12 +78,28 @@
       </form>
       <div id="dcf" class="muted"></div>
     </div>
+
+    <div class="card wide"><h2>同業比較</h2>
+      <form id="peerForm" onsubmit="runPeer(event)" style="margin-bottom:12px">
+        <label>目標公司（代號）<input id="peer_target" value="2330"></label>
+        <label>同業代號（逗號分隔）<input id="peer_ids" value="2317, 2454, 2303"></label>
+        <button class="full" type="submit">執行同業比較</button>
+      </form>
+      <div id="peer" class="muted"></div>
+      <div id="peerChart" class="chart" style="margin-top:12px"></div>
+    </div>
   </div>
 </div>
 
 <script>
 const API = "/api/v1";
 const $ = (id) => document.getElementById(id);
+let trendChart, riskChart, peerChart;
+function initCharts() {
+  trendChart = echarts.init($("trendChart"), "dark");
+  riskChart = echarts.init($("riskChart"), "dark");
+  peerChart = echarts.init($("peerChart"), "dark");
+}
 
 async function api(path, opts) {
   const r = await fetch(API + path, opts);
@@ -107,6 +132,7 @@ async function selectCompany(id) {
     await loadCompany(id);
     await loadHealth(id);
     await loadRatios(id);
+    await loadTrend(id);
     await loadRisk(id);
   } catch (e) {
     document.querySelectorAll("#companyInfo,#health,#ratios,#risk").forEach(d => d.innerHTML = "");
@@ -143,15 +169,38 @@ async function loadHealth(id) {
 async function loadRatios(id) {
   const r = await api(`/financials/${id}/ratios`);
   const d = r.data || {};
-  const rows = [
-    ["負債比率", "debt_to_asset_ratio"], ["流動比率", "current_ratio"], ["速動比率", "quick_ratio"],
-    ["ROA", "roa"], ["ROE", "roe"], ["ROIC", "roic"], ["毛利率", "gross_margin"],
-    ["營業利益率", "operating_margin"], ["淨利率", "net_margin"], ["本益比", "pe_ratio"],
-    ["股價淨值比", "pb_ratio"], ["EV/EBITDA", "ev_ebitda"],
+  const pctRows = [
+    ["負債比率", "debt_to_asset_ratio", 0], ["ROA", "roa", 1], ["ROE", "roe", 1], ["毛利率", "gross_margin", 1],
+    ["營業利益率", "operating_margin", 1], ["淨利率", "net_margin", 1],
   ];
+  const numRows = [["流動比率", "current_ratio"], ["速動比率", "quick_ratio"], ["本益比", "pe_ratio"], ["股價淨值比", "pb_ratio"], ["EV/EBITDA", "ev_ebitda"]];
+  const cell = (k, isPct) => d[k] !== null && d[k] !== undefined ? (isPct ? (d[k]*100).toFixed(2)+"%" : fmt(d[k])) : "—";
   $("ratios").innerHTML = `<div class="muted">期別：${r.year_quarter || "latest"}</div>
-    <table><tr>${rows.map(([k]) => `<th>${k}</th>`).join("")}</tr>
-    <tr>${rows.map(([,k]) => `<td>${d[k] !== null && d[k] !== undefined ? (d[k] > 1 && ["pe_ratio","pb_ratio","ev_ebitda","current_ratio","quick_ratio"].includes(k) ? fmt(d[k]) : (d[k]*100).toFixed(2)+"%") : "—"}</td>`).join("")}</tr></table>`;
+    <table>
+      <tr>${pctRows.map(([k]) => `<th>${k}</th>`).join("")}${numRows.map(([k]) => `<th>${k}</th>`).join("")}</tr>
+      <tr>${pctRows.map(([,k,i]) => `<td>${cell(k,i)}</td>`).join("")}${numRows.map(([,k]) => `<td>${cell(k,0)}</td>`).join("")}</tr>
+    </table>`;
+}
+
+async function loadTrend(id) {
+  const r = await api(`/financials/${id}/trend?periods=4`);
+  const d = r.data || {};
+  const st = (d.statements_trend || []).slice().reverse();
+  const periods = st.map(x => x.period);
+  trendChart.setOption({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis" },
+    legend: { data: ["營收", "淨利"], textStyle: { color: "#94a3b8" } },
+    grid: { left: 70, right: 20, top: 40, bottom: 30 },
+    xAxis: { type: "category", data: periods, axisLabel: { color: "#94a3b8" } },
+    yAxis: { type: "value", axisLabel: { color: "#94a3b8", formatter: v => (v/1e6).toFixed(0)+"M" } },
+    series: [
+      { name: "營收", type: "bar", data: st.map(x => x.revenue), itemStyle: { color: "#38bdf8" } },
+      { name: "淨利", type: "line", data: st.map(x => x.net_income), itemStyle: { color: "#4ade80" } },
+    ],
+  });
+  const g = d.growth_analysis || {};
+  $("trendNote").textContent = `營收成長 ${g.revenue_growth ?? "—"}%｜淨利成長 ${g.net_income_growth ?? "—"}%｜${d.trend_summary?.revenue_trend || ""}`;
 }
 
 async function loadRisk(id) {
@@ -159,6 +208,20 @@ async function loadRisk(id) {
   const d = r.data || {};
   const b = d.risk_breakdown || {};
   const distress = b.financial_distress || {};
+  const scores = {
+    "財務危機": distress.score ?? 0,
+    "流動性": b.liquidity?.liquidity_score ?? 0,
+    "獲利趨勢": b.profitability_trend?.score ?? 0,
+    "槓桿": b.leverage?.score ?? 0,
+  };
+  riskChart.setOption({
+    backgroundColor: "transparent",
+    radar: {
+      indicator: Object.keys(scores).map(k => ({ name: k, max: 100 })),
+      axisName: { color: "#94a3b8" },
+    },
+    series: [{ type: "radar", data: [{ value: Object.values(scores), name: id, areaStyle: { opacity: 0.3 }, itemStyle: { color: "#38bdf8" } }] }],
+  });
   $("risk").innerHTML = `
     <div style="font-size:26px;font-weight:700">${fmt(d.overall_risk_score)}</div>
     <span class="badge ${(d.risk_grade === "A" || d.risk_grade === "B") ? "good" : (d.risk_grade === "F" ? "bad" : "warn")}">${d.risk_grade || "—"} · ${d.risk_level || "—"}</span>
@@ -187,17 +250,58 @@ async function runDcf(e) {
       <div class="kv" style="margin-top:8px">
         <b>企業價值</b><span>${fmt(d.enterprise_value)}</span>
         <b>股權價值</b><span>${fmt(d.equity_value)}</span>
-        <b>當前股價</b><span>${fmt(d.current_price)}</span>
-        <b>上漲空間</b><span>${d.upside_downside !== null && d.upside_downside !== undefined ? fmt(d.upside_downside) + "%" : "—"}</span>
-        <b>終值占比</b><span>${d.terminal_value_percentage !== null && d.terminal_value_percentage !== undefined ? fmt(d.terminal_value_percentage) + "%" : "—"}</span>
+        <b>上漲空間</b><span>${d.upside_downside != null ? fmt(d.upside_downside) + "%" : "—"}</span>
+        <b>終值占比</b><span>${d.terminal_value_percentage != null ? fmt(d.terminal_value_percentage) + "%" : "—"}</span>
       </div>`;
   } catch (err) {
     $("dcf").innerHTML = `<span class="error">${err.message}</span>`;
   }
 }
 
-// 預設載入台積電
-window.addEventListener("DOMContentLoaded", () => { $("q").value = "2330"; selectCompany("2330"); });
+async function runPeer(e) {
+  e.preventDefault();
+  const target = $("peer_target").value.trim();
+  const ids = $("peer_ids").value.split(",").map(s => s.trim()).filter(Boolean);
+  if (!target || ids.length === 0) { $("peer").innerHTML = '<span class="error">請輸入目標與同業代號</span>'; return; }
+  try {
+    const r = await api("/analysis/peer-comparison/auto", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ target_company_id: target, peer_company_ids: ids }) });
+    const d = r.data || {};
+    const es = d.executive_summary || {};
+    const ratings = d.performance_overview?.ratings || {};
+    const bm = d.industry_comparison?.key_benchmarks || {};
+    const peers = d.peer_companies || [];
+    $("peer").innerHTML = `
+      <div style="font-size:22px;font-weight:700">綜合評分 <span style="color:var(--good)">${es.composite_score ?? "—"}</span> <span class="muted">/ 100</span></div>
+      <div class="kv" style="margin-top:8px">
+        ${Object.entries(ratings).map(([k,v]) => `<b>${k}</b><span>${v}</span>`).join("")}
+        <b>同業平均 ROE</b><span>${bm.avg_roe ?? "—"}%</span>
+        <b>同業平均負債比</b><span>${bm.avg_debt_ratio ?? "—"}%</span>
+      </div>
+      <table style="margin-top:8px">
+        <tr><th>公司</th><th>ROE</th><th>ROA</th><th>流動比</th><th>負債比</th></tr>
+        ${peers.map(p => `<tr><td>${p.company_id} ${p.company_name}</td><td>${p.key_ratios?.roe}%</td><td>${p.key_ratios?.roa}%</td><td>${p.key_ratios?.current_ratio}</td><td>${p.key_ratios?.debt_ratio}%</td></tr>`).join("")}
+      </table>
+      ${(d.swot_analysis?.strengths || []).length ? "<ul>" + d.swot_analysis.strengths.map(s => `<li>💪 ${s}</li>`).join("") + "</ul>" : ""}
+      ${(d.swot_analysis?.weaknesses || []).length ? "<ul>" + d.swot_analysis.weaknesses.map(s => `<li>⚠️ ${s}</li>`).join("") + "</ul>" : ""}`;
+    peerChart.setOption({
+      backgroundColor: "transparent",
+      tooltip: { trigger: "axis" },
+      legend: { textStyle: { color: "#94a3b8" } },
+      grid: { left: 60, right: 20, top: 40, bottom: 40 },
+      xAxis: { type: "category", data: peers.map(p => `${p.company_id}`), axisLabel: { color: "#94a3b8" } },
+      yAxis: { type: "value", axisLabel: { color: "#94a3b8" } },
+      series: [
+        { name: "ROE%", type: "bar", data: peers.map(p => p.key_ratios?.roe), itemStyle: { color: "#38bdf8" } },
+        { name: "ROA%", type: "bar", data: peers.map(p => p.key_ratios?.roa), itemStyle: { color: "#4ade80" } },
+      ],
+    });
+  } catch (err) {
+    $("peer").innerHTML = `<span class="error">${err.message}</span>`;
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => { initCharts(); $("q").value = "2330"; selectCompany("2330"); });
+window.addEventListener("resize", () => { trendChart?.resize(); riskChart?.resize(); peerChart?.resize(); });
 </script>
 </body>
 </html>

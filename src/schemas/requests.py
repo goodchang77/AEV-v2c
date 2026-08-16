@@ -423,3 +423,9 @@ class PeerComparisonDataRequest(BaseModel):
     target: PeerCompanyDataInput = Field(..., description="目標公司資料")
     peers: List[PeerCompanyDataInput] = Field(..., min_length=1, description="同業公司列表")
     industry_benchmark: IndustryBenchmarkInput = Field(..., description="產業基準")
+
+
+class AutoPeerComparisonRequest(BaseModel):
+    """同業比較分析請求（自動由 DB 抓取資料）"""
+    target_company_id: str = Field(..., pattern=r"^\d{4}$", description="目標公司代碼")
+    peer_company_ids: List[str] = Field(..., min_length=1, description="同業公司代碼列表")

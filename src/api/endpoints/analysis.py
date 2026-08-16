@@ -11,11 +11,13 @@ Analysis API Endpoints
 
 from dataclasses import asdict
 from datetime import datetime
+import statistics
 
 from fastapi import APIRouter, HTTPException
 
 from src.core.exceptions import FinancialDataNotFoundError
 from src.schemas.requests import (
+    AutoPeerComparisonRequest,
     DCFValuationRequest,
     PeerComparisonDataRequest,
     RiskAssessmentRequest,
@@ -102,6 +104,111 @@ async def peer_comparison_analysis(request: PeerComparisonDataRequest):
     target = _to_peer_company(request.target)
     peers = [_to_peer_company(p) for p in request.peers]
     benchmark = _to_industry_benchmark(request.industry_benchmark)
+
+    analyzer = PeerAnalyzer()
+    result = analyzer.analyze_peer_comparison(target, peers, benchmark)
+    report = analyzer.generate_peer_comparison_report(result)
+
+    return StandardResponse(
+        success=True,
+        data=report,
+        meta={
+            "company_id": target.company_id,
+            "num_peers": len(peers),
+            "analysis_date": datetime.utcnow().isoformat(),
+        },
+    )
+
+
+@router.post("/peer-comparison/auto", response_model=StandardResponse)
+async def auto_peer_comparison(request: AutoPeerComparisonRequest):
+    """同業比較分析（自動由 DB 抓取目標與同業的財務資料）"""
+    fin_svc = FinancialDataService()
+    comp_svc = CompanyDataService()
+
+    def _pct(v):
+        return round((v or 0) * 100, 2)
+
+    def _entry(cid, info, stmts, ratios) -> PeerCompanyData:
+        return PeerCompanyData(
+            company_id=cid,
+            company_name=info.get("company_name", cid),
+            market_cap=float(info.get("capital_amount") or 0) * 1000,
+            revenue=float(stmts.revenue or 0) * 1000,
+            net_income=float(stmts.net_income or 0) * 1000,
+            total_assets=float(stmts.total_assets or 0) * 1000,
+            shareholders_equity=float(stmts.shareholders_equity or 0) * 1000,
+            roe=_pct(ratios.get("roe")),
+            roa=_pct(ratios.get("roa")),
+            current_ratio=round(ratios.get("current_ratio") or 0, 2),
+            debt_ratio=_pct(ratios.get("debt_to_asset_ratio")),
+            net_margin=_pct(ratios.get("net_margin")),
+            pe_ratio=round(ratios["pe_ratio"], 2) if ratios.get("pe_ratio") else None,
+            pb_ratio=round(ratios["pb_ratio"], 2) if ratios.get("pb_ratio") else None,
+            ev_ebitda=round(ratios["ev_ebitda"], 2) if ratios.get("ev_ebitda") else None,
+        )
+
+    entries = {}
+    for cid in [request.target_company_id] + list(request.peer_company_ids):
+        info = await comp_svc.get_company_basic_info(cid)
+        stmts = await fin_svc.get_latest_financial_statements(cid)
+        ratios = await fin_svc.get_financial_ratios(cid)
+        if info is None or stmts is None or not ratios:
+            raise HTTPException(status_code=404, detail=f"找不到公司 {cid} 的財務資料")
+        entries[cid] = _entry(cid, info, stmts, ratios)
+
+    target = entries[request.target_company_id]
+    peers = [entries[c] for c in request.peer_company_ids]
+
+    def _avg(vals):
+        return round(sum(vals) / len(vals), 2) if vals else 0.0
+
+    def _med(vals):
+        return round(statistics.median(vals), 2) if vals else 0.0
+
+    def _pctile(vals, p):
+        if len(vals) < 2:
+            return round(vals[0], 2) if vals else 0.0
+        return round(statistics.quantiles(sorted(vals), n=100)[p - 1], 2)
+
+    def _std(vals):
+        return round(statistics.stdev(vals), 2) if len(vals) > 1 else 0.0
+
+    roe_l = [p.roe for p in peers]
+    roa_l = [p.roa for p in peers]
+    cr_l = [p.current_ratio for p in peers]
+    debt_l = [p.debt_ratio for p in peers]
+    nm_l = [p.net_margin for p in peers]
+    pe_l = [p.pe_ratio for p in peers if p.pe_ratio is not None]
+    pb_l = [p.pb_ratio for p in peers if p.pb_ratio is not None]
+
+    benchmark = IndustryBenchmark(
+        industry_code=(
+            await comp_svc.get_company_basic_info(request.target_company_id)
+        ).get("industry_code", "AUTO"),
+        industry_name="自動同業群組",
+        company_count=len(peers),
+        avg_roe=_avg(roe_l),
+        avg_roa=_avg(roa_l),
+        avg_current_ratio=_avg(cr_l),
+        avg_debt_ratio=_avg(debt_l),
+        avg_gross_margin=0.0,
+        avg_net_margin=_avg(nm_l),
+        avg_pe_ratio=_avg(pe_l),
+        avg_pb_ratio=_avg(pb_l),
+        median_roe=_med(roe_l),
+        median_roa=_med(roa_l),
+        median_current_ratio=_med(cr_l),
+        median_debt_ratio=_med(debt_l),
+        roe_25_percentile=_pctile(roe_l, 25),
+        roe_75_percentile=_pctile(roe_l, 75),
+        pe_25_percentile=_pctile(pe_l, 25),
+        pe_75_percentile=_pctile(pe_l, 75),
+        debt_25_percentile=_pctile(debt_l, 25),
+        debt_75_percentile=_pctile(debt_l, 75),
+        roe_std_dev=_std(roe_l),
+        roa_std_dev=_std(roa_l),
+    )
 
     analyzer = PeerAnalyzer()
     result = analyzer.analyze_peer_comparison(target, peers, benchmark)

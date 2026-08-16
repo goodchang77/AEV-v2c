@@ -221,6 +221,105 @@ def _insert_financial_ratios(cur) -> None:
     print("    已插入 2330 財務比率（2024Q4）")
 
 
+def _insert_peer_samples(cur) -> None:
+    """插入同業樣本財務資料（2317 鴻海 / 2454 聯發科 / 2303 聯電，2024Q4，供同業比較展示）
+    冪等：已有資料的公司略過。"""
+    PEERS = {
+        "2317": dict(
+            name="鴻海", revenue=1_900_000_000, cost=1_780_000_000, opex=74_000_000,
+            net_income=46_000_000, ca=3_000_000_000, nca=1_200_000_000,
+            cl=2_000_000_000, ncl=400_000_000,
+            roe=0.11, roa=0.045, cr=1.6, debt=0.52, nm=0.024, gm=0.063,
+            om=0.024, pe=12.0, pb=1.5, ev_ebitda=8.0,
+        ),
+        "2454": dict(
+            name="聯發科", revenue=130_000_000, cost=65_000_000, opex=42_000_000,
+            net_income=23_000_000, ca=380_000_000, nca=260_000_000,
+            cl=170_000_000, ncl=50_000_000,
+            roe=0.22, roa=0.14, cr=1.9, debt=0.34, nm=0.177, gm=0.50,
+            om=0.177, pe=18.0, pb=5.0, ev_ebitda=12.0,
+        ),
+        "2303": dict(
+            name="聯電", revenue=55_000_000, cost=38_000_000, opex=8_500_000,
+            net_income=8_500_000, ca=320_000_000, nca=240_000_000,
+            cl=100_000_000, ncl=80_000_000,
+            roe=0.09, roa=0.06, cr=2.2, debt=0.32, nm=0.155, gm=0.31,
+            om=0.155, pe=11.0, pb=1.8, ev_ebitda=7.0,
+        ),
+    }
+
+    for cid, d in PEERS.items():
+        cur.execute(
+            "SELECT count(*) FROM financial_statements WHERE company_id = %s", (cid,))
+        if cur.fetchone()[0] > 0:
+            print(f"    {cid} {d['name']} 財務資料已存在，略過")
+            continue
+
+        gross = d["revenue"] - d["cost"]
+        op_income = gross - d["opex"]
+        total_assets = d["ca"] + d["nca"]
+        total_liab = d["cl"] + d["ncl"]
+        equity = total_assets - total_liab
+
+        cur.execute(
+            """
+            INSERT INTO financial_statements (
+                company_id, report_type, year_quarter, statement_type, report_date,
+                current_assets, non_current_assets, total_assets,
+                current_liabilities, non_current_liabilities, total_liabilities,
+                shareholders_equity, revenue, cost_of_revenue, gross_profit,
+                operating_expenses, operating_income, net_income,
+                data_source, data_quality_score, is_audited
+            ) VALUES (
+                %(cid)s, 'quarterly', '2024Q4', 'IS', '2024-12-31',
+                %(ca)s, %(nca)s, %(ta)s, %(cl)s, %(ncl)s, %(tl)s, %(eq)s,
+                %(rev)s, %(cost)s, %(gp)s, %(opex)s, %(oi)s, %(ni)s,
+                'sample', 1.00, true
+            )
+            ON CONFLICT (company_id, year_quarter, statement_type) DO NOTHING
+            """,
+            dict(cid=cid, ca=d["ca"], nca=d["nca"], ta=total_assets,
+                 cl=d["cl"], ncl=d["ncl"], tl=total_liab, eq=equity,
+                 rev=d["revenue"], cost=d["cost"], gp=gross,
+                 opex=d["opex"], oi=op_income, ni=d["net_income"]),
+        )
+        cur.execute(
+            """
+            INSERT INTO financial_statements (
+                company_id, report_type, year_quarter, statement_type, report_date,
+                current_assets, non_current_assets, total_assets,
+                current_liabilities, non_current_liabilities, total_liabilities,
+                shareholders_equity, data_source, data_quality_score, is_audited
+            ) VALUES (
+                %(cid)s, 'quarterly', '2024Q4', 'BS', '2024-12-31',
+                %(ca)s, %(nca)s, %(ta)s, %(cl)s, %(ncl)s, %(tl)s, %(eq)s,
+                'sample', 1.00, true
+            )
+            ON CONFLICT (company_id, year_quarter, statement_type) DO NOTHING
+            """,
+            dict(cid=cid, ca=d["ca"], nca=d["nca"], ta=total_assets,
+                 cl=d["cl"], ncl=d["ncl"], tl=total_liab, eq=equity),
+        )
+        cur.execute(
+            """
+            INSERT INTO financial_ratios (
+                company_id, year_quarter, calculation_method, data_completeness,
+                debt_to_asset_ratio, current_ratio,
+                roa, roe, gross_margin, operating_margin, net_margin,
+                pe_ratio, pb_ratio, ev_ebitda
+            ) VALUES (
+                %(cid)s, '2024Q4', 'sample', 1.00,
+                %(debt)s, %(cr)s,
+                %(roa)s, %(roe)s, %(gm)s, %(om)s, %(nm)s,
+                %(pe)s, %(pb)s, %(ev)s
+            )
+            """,
+            dict(cid=cid, debt=d["debt"], cr=d["cr"], roa=d["roa"], roe=d["roe"],
+                 gm=d["gm"], om=d["om"], nm=d["nm"], pe=d["pe"], pb=d["pb"], ev=d["ev_ebitda"]),
+        )
+        print(f"    已插入 {cid} {d['name']} 樣本財務資料")
+
+
 def main() -> int:
     settings = get_settings()
     print(f"連線目標: {settings.DATABASE_URL.split('@')[-1]}")
@@ -251,9 +350,13 @@ def main() -> int:
     _apply_sql_file(cur, PROJECT_ROOT / "database" / "init" / "03_valuation_and_stock.sql")
 
     # 4. 財務報表 + 比率
-    print("[4/4] 插入範例財務資料...")
+    print("[4/5] 插入範例財務資料...")
     _insert_financial_statements(cur)
     _insert_financial_ratios(cur)
+
+    # 5. 同業樣本資料
+    print("[5/5] 插入同業樣本資料...")
+    _insert_peer_samples(cur)
 
     # 5. 彙總
     print("-" * 60)
