@@ -45,6 +45,12 @@
 <header>
   <h1>📊 財務分析與企業評價系統</h1>
   <span class="sub">AEV-v2c · MVP Dashboard</span>
+  <span style="flex:1"></span>
+  <input id="auth_user" placeholder="帳號" style="width:110px">
+  <input id="auth_pass" type="password" placeholder="密碼" style="width:110px">
+  <button onclick="doLogin()">登入</button>
+  <button onclick="doRegister()" style="background:var(--panel);color:var(--accent)">註冊</button>
+  <span id="authStatus" class="sub">未登入</span>
 </header>
 
 <div class="wrap">
@@ -87,6 +93,17 @@
       </form>
       <div id="peer" class="muted"></div>
       <div id="peerChart" class="chart" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card wide"><h2>投資組合（需登入）</h2>
+      <form id="pfForm" onsubmit="addPosition(event)" style="margin-bottom:12px">
+        <label>公司代號<input id="pf_cid" placeholder="2330"></label>
+        <label>股數<input id="pf_shares" type="number" step="0.01" placeholder="1000"></label>
+        <label>每股成本<input id="pf_cost" type="number" step="0.01" placeholder="500"></label>
+        <label>最新股價（選填）<input id="pf_price" type="number" step="0.01" placeholder="1000"></label>
+        <button class="full" type="submit">新增/更新部位</button>
+      </form>
+      <div id="pf" class="muted">登入後顯示投資組合</div>
     </div>
   </div>
 </div>
@@ -300,7 +317,69 @@ async function runPeer(e) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => { initCharts(); $("q").value = "2330"; selectCompany("2330"); });
+// ---------------- 認證與投資組合 ----------------
+let TOKEN = localStorage.getItem("aev_token") || "";
+function authHeaders() { return TOKEN ? { "Authorization": "Bearer " + TOKEN } : {}; }
+
+async function doLogin() {
+  try {
+    const r = await api("/auth/login", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ username: $("auth_user").value, password: $("auth_pass").value }) });
+    TOKEN = r.access_token;
+    localStorage.setItem("aev_token", TOKEN);
+    $("authStatus").textContent = "✅ 已登入：" + $("auth_user").value;
+    loadPortfolio();
+  } catch (e) { $("authStatus").textContent = "❌ " + e.message; }
+}
+
+async function doRegister() {
+  try {
+    const r = await api("/auth/register", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ username: $("auth_user").value, email: $("auth_user").value + "@demo.com", password: $("auth_pass").value }) });
+    TOKEN = r.access_token;
+    localStorage.setItem("aev_token", TOKEN);
+    $("authStatus").textContent = "✅ 已註冊並登入：" + $("auth_user").value;
+    loadPortfolio();
+  } catch (e) { $("authStatus").textContent = "❌ " + e.message; }
+}
+
+async function addPosition(e) {
+  e.preventDefault();
+  if (!TOKEN) { $("pf").innerHTML = '<span class="error">請先登入</span>'; return; }
+  try {
+    await api("/portfolio/positions", { method: "POST", headers: {...authHeaders(), "Content-Type":"application/json"}, body: JSON.stringify({ company_id: $("pf_cid").value, shares: parseFloat($("pf_shares").value), cost_basis: parseFloat($("pf_cost").value), current_price: $("pf_price").value ? parseFloat($("pf_price").value) : null }) });
+    loadPortfolio();
+  } catch (e) { $("pf").innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function loadPortfolio() {
+  if (!TOKEN) return;
+  try {
+    const r = await api("/portfolio/summary", { headers: authHeaders() });
+    const d = r.data || {};
+    $("pf").innerHTML = `
+      <div style="font-size:18px;font-weight:700">總市值 <span style="color:var(--good)">${fmt(d.total_value)}</span>｜總損益
+        <span style="color:${(d.total_pnl ?? 0) >= 0 ? "var(--good)" : "var(--bad)"}">${fmt(d.total_pnl)}（${fmt(d.total_pnl_pct)}%）</span></div>
+      <table style="margin-top:8px">
+        <tr><th>公司</th><th>股數</th><th>成本</th><th>現價</th><th>市值</th><th>損益%</th><th>ROE</th><th>PE</th><th></th></tr>
+        ${(d.positions || []).map(p => `<tr>
+          <td>${p.company_id} ${p.company_name || ""}</td><td>${fmt(p.shares)}</td><td>${fmt(p.cost_basis)}</td><td>${p.current_price ?? "—"}</td>
+          <td>${fmt(p.market_value)}</td><td style="color:${p.pnl >= 0 ? "var(--good)" : "var(--bad)"}">${fmt(p.pnl_pct)}%</td>
+          <td>${p.roe != null ? (p.roe*100).toFixed(1)+"%" : "—"}</td><td>${p.pe_ratio ?? "—"}</td>
+          <td><a href="#" style="color:var(--bad)" onclick="delPosition('${p.company_id}')">刪除</a></td></tr>`).join("")}
+      </table>`;
+  } catch (e) { $("pf").innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function delPosition(cid) {
+  try {
+    await api(`/portfolio/positions/${cid}`, { method: "DELETE", headers: authHeaders() });
+    loadPortfolio();
+  } catch (e) { $("pf").innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initCharts(); $("q").value = "2330"; selectCompany("2330");
+  if (TOKEN) { $("authStatus").textContent = "✅ 已登入"; loadPortfolio(); }
+});
 window.addEventListener("resize", () => { trendChart?.resize(); riskChart?.resize(); peerChart?.resize(); });
 </script>
 </body>

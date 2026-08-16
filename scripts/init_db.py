@@ -345,9 +345,10 @@ def main() -> int:
     else:
         print(f"[2/4] companies 已有 {company_count} 筆，略過種子資料")
 
-    # 3. 追加資料表（評價/股價，冪等可重跑）
-    print("[3/4] 建立評價/股價資料表...")
+    # 3. 追加資料表（評價/股價/投資組合，冪等可重跑）
+    print("[3/4] 建立追加資料表...")
     _apply_sql_file(cur, PROJECT_ROOT / "database" / "init" / "03_valuation_and_stock.sql")
+    _apply_sql_file(cur, PROJECT_ROOT / "database" / "init" / "04_portfolio.sql")
 
     # 4. 財務報表 + 比率
     print("[4/5] 插入範例財務資料...")
@@ -362,7 +363,7 @@ def main() -> int:
     print("-" * 60)
     for t in ("companies", "financial_statements", "financial_ratios",
               "industry_benchmarks", "users", "user_watchlists",
-              "valuation_results", "stock_prices"):
+              "valuation_results", "stock_prices", "portfolio_positions"):
         cur.execute(f"SELECT count(*) FROM {t}")
         print(f"    {t}: {cur.fetchone()[0]} 筆")
 

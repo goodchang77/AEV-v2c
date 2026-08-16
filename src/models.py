@@ -342,3 +342,26 @@ class StockPrice(Base):
     __table_args__ = (
         Index('idx_stock_prices_company_date', 'company_id', 'trade_date'),
     )
+
+
+class PortfolioPosition(Base):
+    """投資組合部位表"""
+    __tablename__ = "portfolio_positions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
+    company_id = Column(String(10), ForeignKey("companies.company_id"), nullable=False)
+    shares = Column(Decimal(15, 2), nullable=False, default=0)
+    cost_basis = Column(Decimal(15, 4), nullable=False, default=0)  # 每股成本
+    current_price = Column(Decimal(15, 4))
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 關聯
+    user = relationship("User")
+    company = relationship("Company")
+    
+    __table_args__ = (
+        Index('idx_portfolio_user_company', 'user_id', 'company_id', unique=True),
+    )
