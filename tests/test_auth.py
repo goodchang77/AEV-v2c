@@ -26,3 +26,27 @@ def test_create_access_token_payload():
     assert payload["sub"] == "00000000-0000-0000-0000-000000000000"
     assert payload["username"] == "alice"
     assert "exp" in payload
+
+
+def test_require_roles_allows_matching_role():
+    from types import SimpleNamespace
+
+    from src.api.endpoints.auth import require_roles
+
+    checker = require_roles("admin")
+    admin = SimpleNamespace(role="admin")
+    assert checker(admin) is admin
+
+
+def test_require_roles_denies_other_roles():
+    from types import SimpleNamespace
+
+    import pytest
+    from fastapi import HTTPException
+
+    from src.api.endpoints.auth import require_roles
+
+    checker = require_roles("admin")
+    with pytest.raises(HTTPException) as exc:
+        checker(SimpleNamespace(role="user"))
+    assert exc.value.status_code == 403

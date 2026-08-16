@@ -103,6 +103,20 @@ def get_current_user(
     return user
 
 
+def require_roles(*allowed_roles: str):
+    """角色權限依賴：僅允許指定角色（admin/analyst/user/readonly）存取"""
+
+    def checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"需要權限: {', '.join(allowed_roles)}",
+            )
+        return current_user
+
+    return checker
+
+
 # ---------------------------------------------------------------------------
 # 端點
 # ---------------------------------------------------------------------------
@@ -165,4 +179,25 @@ def me(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role,
         "full_name": current_user.full_name,
+    }
+
+
+@router.get("/users")
+def list_users(
+    current_user: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    """列出所有使用者（僅 admin）"""
+    users = db.query(User).order_by(User.created_at).all()
+    return {
+        "users": [
+            {
+                "user_id": str(u.user_id),
+                "username": u.username,
+                "email": u.email,
+                "role": u.role,
+                "is_active": u.is_active,
+            }
+            for u in users
+        ]
     }
