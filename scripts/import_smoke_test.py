@@ -76,6 +76,7 @@ MODULES = [
     "src.api.endpoints.agent",
     "src.api.endpoints.valuation",
     "src.api.endpoints.indicators",
+    "src.api.endpoints.reports",
     # api routes + app entry
     "src.api.routes",
     "src.api.main",
