@@ -3,119 +3,374 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>財務分析與企業評價系統</title>
+<title>AEV · 財務分析與企業評價系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
-  :root { --bg:#0f172a; --panel:#1e293b; --border:#334155; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --good:#4ade80; --warn:#facc15; --bad:#f87171; }
+  :root {
+    --bg: #0b0f17;
+    --bg-elev: #0f1520;
+    --panel: #131a26;
+    --panel-2: #161e2c;
+    --hairline: #1e293b;
+    --hairline-2: #26334a;
+    --text: #d8e1ec;
+    --muted: #8b98ab;
+    --faint: #5b6a80;
+    --accent: #4f9df7;
+    --cyan: #22d3ee;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --rail-w: 56px;
+  }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-  header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  header h1 { font-size:18px; margin:0; }
-  header .sub { color:var(--muted); font-size:12px; }
-  .wrap { max-width:1100px; margin:0 auto; padding:20px; }
-  .searchbar { display:flex; gap:8px; margin-bottom:16px; }
-  input, select, button { background:#0b1120; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; }
-  input:focus { outline:1px solid var(--accent); }
-  button { background:var(--accent); color:#0b1120; font-weight:600; cursor:pointer; border:none; }
-  button:hover { filter:brightness(1.1); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
-  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
-  .card h2 { font-size:14px; margin:0 0 12px; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:8px; }
-  .card.wide { grid-column:1 / -1; }
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  td, th { padding:6px 4px; text-align:left; border-bottom:1px solid var(--border); }
-  th { color:var(--muted); font-weight:500; }
-  .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:13px; }
-  .kv b { color:var(--muted); font-weight:500; }
-  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
-  .badge.good { background:var(--good); color:#0b1120; }
-  .badge.warn { background:var(--warn); color:#0b1120; }
-  .badge.bad { background:var(--bad); color:#0b1120; }
-  .muted { color:var(--muted); font-size:12px; }
-  .error { color:var(--bad); font-size:13px; }
-  ul { margin:6px 0; padding-left:18px; font-size:13px; }
-  li { margin:4px 0; }
-  form { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  form label { font-size:12px; color:var(--muted); }
-  form .full { grid-column:1 / -1; }
-  .chart { width:100%; height:280px; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg); color: var(--text);
+    font-size: 13px; line-height: 1.5;
+    display: flex; overflow: hidden;
+  }
+  /* ---------- Icon rail ---------- */
+  .rail {
+    width: var(--rail-w); min-width: var(--rail-w);
+    background: var(--bg-elev); border-right: 1px solid var(--hairline);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 10px 0; gap: 4px; z-index: 20;
+  }
+  .rail .logo {
+    width: 34px; height: 34px; border-radius: 8px; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--cyan));
+    display: grid; place-items: center; font-weight: 700; color: #06121f; font-size: 15px;
+  }
+  .rail button {
+    width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent;
+    color: var(--faint); cursor: pointer; display: grid; place-items: center;
+    transition: background .15s, color .15s;
+  }
+  .rail button svg { width: 18px; height: 18px; }
+  .rail button:hover { background: var(--panel-2); color: var(--muted); }
+  .rail button.active { background: rgba(79,157,247,.14); color: var(--accent); }
+  .rail .spacer { flex: 1; }
+  /* ---------- App shell ---------- */
+  .app { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .topbar {
+    display: flex; align-items: center; gap: 14px; padding: 0 18px; height: 50px;
+    border-bottom: 1px solid var(--hairline); background: var(--bg-elev);
+  }
+  .topbar .brand { font-weight: 600; font-size: 14px; letter-spacing: .02em; white-space: nowrap; }
+  .topbar .brand span { color: var(--accent); }
+  .searchwrap { flex: 1; max-width: 460px; position: relative; }
+  .searchwrap input {
+    width: 100%; background: var(--panel); border: 1px solid var(--hairline-2);
+    border-radius: 6px; color: var(--text); padding: 7px 12px; font-size: 13px;
+  }
+  .searchwrap input:focus { outline: none; border-color: var(--accent); }
+  .searchwrap .hint {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--faint); font-size: 11px; pointer-events: none;
+  }
+  .authrow { display: flex; gap: 6px; align-items: center; }
+  .authrow input {
+    width: 96px; background: var(--panel); border: 1px solid var(--hairline-2);
+    border-radius: 6px; color: var(--text); padding: 6px 9px; font-size: 12px;
+  }
+  .authrow input:focus { outline: none; border-color: var(--accent); }
+  .entitybar {
+    display: flex; align-items: center; gap: 18px; padding: 0 18px; height: 44px;
+    border-bottom: 1px solid var(--hairline); background: var(--bg-elev);
+  }
+  .entitybar .entity { font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .entitybar .entity .meta { color: var(--faint); font-weight: 400; font-size: 12px; }
+  .entitybar .tabs { display: flex; gap: 2px; overflow-x: auto; }
+  .entitybar .tabs button {
+    background: transparent; border: none; color: var(--muted); font-size: 12px;
+    padding: 6px 10px; cursor: pointer; border-radius: 5px; white-space: nowrap;
+    letter-spacing: .03em;
+  }
+  .entitybar .tabs button:hover { color: var(--text); }
+  .entitybar .tabs button.active { color: var(--accent); background: rgba(79,157,247,.1); }
+  /* ---------- Content ---------- */
+  main { flex: 1; overflow-y: auto; padding: 18px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px;
+    position: relative; overflow: hidden;
+  }
+  .kpi .kpi-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px;
+  }
+  .kpi .kpi-value { font-size: 24px; font-weight: 600; font-family: var(--mono); letter-spacing: -.02em; }
+  .kpi .kpi-value small { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .kpi .kpi-sub { font-size: 11px; color: var(--faint); margin-top: 4px; }
+  .kpi .kpi-bar { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  .panel-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted);
+    margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-title .right { color: var(--faint); font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .chart { width: 100%; height: 300px; }
+  .chart.sm { height: 220px; }
+  /* ---------- Buttons / inputs ---------- */
+  button.btn {
+    background: var(--accent); border: none; color: #06121f; font-weight: 600;
+    font-size: 12px; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+  }
+  button.btn:hover { filter: brightness(1.12); }
+  button.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--hairline-2); }
+  button.btn.ghost:hover { border-color: var(--accent); }
+  button.btn.danger { background: transparent; color: var(--red); border: 1px solid var(--hairline-2); }
+  input.in, select.in {
+    background: var(--panel-2); border: 1px solid var(--hairline-2); border-radius: 6px;
+    color: var(--text); padding: 7px 10px; font-size: 12px; font-family: var(--mono);
+  }
+  input.in:focus { outline: none; border-color: var(--accent); }
+  label.f { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--muted); letter-spacing: .03em; }
+  .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px; }
+  /* ---------- Tables ---------- */
+  table.t { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.t th {
+    text-align: right; color: var(--muted); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .06em; padding: 6px 8px;
+    border-bottom: 1px solid var(--hairline-2); white-space: nowrap;
+  }
+  table.t th:first-child, table.t td:first-child { text-align: left; }
+  table.t td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--hairline); font-family: var(--mono); white-space: nowrap; }
+  table.t tr:hover td { background: rgba(79,157,247,.05); }
+  /* ---------- Badges / text ---------- */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge.good { background: rgba(52,211,153,.14); color: var(--green); }
+  .badge.warn { background: rgba(251,191,36,.14); color: var(--amber); }
+  .badge.bad { background: rgba(248,113,113,.14); color: var(--red); }
+  .badge.info { background: rgba(79,157,247,.14); color: var(--accent); }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+  .muted { color: var(--muted); } .faint { color: var(--faint); }
+  .mono { font-family: var(--mono); }
+  .big-num { font-size: 34px; font-weight: 600; font-family: var(--mono); letter-spacing: -.02em; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12px; }
+  .kv b { color: var(--muted); font-weight: 500; }
+  ul.tight { margin: 6px 0 0; padding-left: 16px; font-size: 12px; }
+  ul.tight li { margin: 4px 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+  .dimbar { height: 6px; background: var(--hairline); border-radius: 3px; overflow: hidden; }
+  .dimbar i { display: block; height: 100%; border-radius: 3px; }
+  .scorebar-row { display: grid; grid-template-columns: 110px 1fr 46px; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 12px; }
+  textarea.pre {
+    width: 100%; height: 300px; background: var(--bg-elev); color: var(--text);
+    border: 1px solid var(--hairline); border-radius: 6px; padding: 10px;
+    font-family: var(--mono); font-size: 12px; resize: vertical;
+  }
+  .toast {
+    position: fixed; right: 18px; bottom: 18px; background: var(--panel-2);
+    border: 1px solid var(--accent); border-radius: 8px; padding: 10px 16px;
+    font-size: 12px; z-index: 50; display: none;
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>📊 財務分析與企業評價系統</h1>
-  <span class="sub">AEV-v2c · MVP Dashboard</span>
-  <span style="flex:1"></span>
-  <input id="auth_user" placeholder="帳號" style="width:110px">
-  <input id="auth_pass" type="password" placeholder="密碼" style="width:110px">
-  <button onclick="doLogin()">登入</button>
-  <button onclick="doRegister()" style="background:var(--panel);color:var(--accent)">註冊</button>
-  <span id="authStatus" class="sub">未登入</span>
-</header>
 
-<div class="wrap">
-  <div class="searchbar">
-    <input id="q" placeholder="搜尋公司（代號或名稱，例如 2330 或 台積）" style="flex:1">
-    <button onclick="search()">搜尋</button>
-  </div>
-  <div class="searchbar">
-    <select id="companySelect" onchange="selectCompany(this.value)" style="flex:1">
-      <option value="">— 選擇公司 —</option>
-    </select>
-  </div>
+<!-- ====================== Icon rail ====================== -->
+<aside class="rail">
+  <div class="logo">◆</div>
+  <button data-view="overview" class="active" title="總覽">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+  </button>
+  <button data-view="financials" title="財務">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  </button>
+  <button data-view="valuation" title="估值">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+  </button>
+  <button data-view="peers" title="同業">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 19c0-3 2.5-5 6.5-5s6.5 2 6.5 5M14.5 13.5c3 .3 5 2 5 4.5"/></svg>
+  </button>
+  <button data-view="risk" title="風險">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4v6c0 5-3.8 8.4-9 10-5.2-1.6-9-5-9-10V6l9-4z"/></svg>
+  </button>
+  <button data-view="reports" title="報告">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l4 4v16H6z"/><path d="M15 2v5h5M9 12h6M9 16h6"/></svg>
+  </button>
+  <button data-view="portfolio" title="投資組合">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+  </button>
+  <div class="spacer"></div>
+</aside>
 
-  <div class="grid">
-    <div class="card"><h2>公司基本資料</h2><div id="companyInfo" class="kv muted">尚未選擇公司</div></div>
-    <div class="card"><h2>財務健康度</h2><div id="health" class="muted">尚未選擇公司</div></div>
-
-    <div class="card wide"><h2>財務比率</h2><div id="ratios" class="muted">尚未選擇公司</div></div>
-
-    <div class="card wide"><h2>營收與獲利趨勢</h2><div id="trendChart" class="chart"></div><div id="trendNote" class="muted"></div></div>
-
-    <div class="card"><h2>風險評估</h2><div id="risk" class="muted">尚未選擇公司</div></div>
-    <div class="card"><h2>風險雷達圖</h2><div id="riskChart" class="chart"></div></div>
-
-    <div class="card"><h2>DCF 估值</h2>
-      <form id="dcfForm" onsubmit="runDcf(event)" style="margin-bottom:12px">
-        <label>折現率 (0.01–0.30)<input id="dcf_rate" type="number" step="0.01" value="0.10"></label>
-        <label>終值成長率 (0–0.10)<input id="dcf_g" type="number" step="0.01" value="0.03"></label>
-        <label class="full">成長率（逗號分隔）<input id="dcf_growth" value="0.10, 0.08, 0.06, 0.05, 0.04"></label>
-        <button class="full" type="submit">執行 DCF</button>
-      </form>
-      <div id="dcf" class="muted"></div>
+<!-- ====================== App ====================== -->
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span>AEV</span> · 財務分析與企業評價</div>
+    <div class="searchwrap">
+      <input id="q" placeholder="搜尋公司（代號或名稱）" onkeydown="if(event.key==='Enter')search()">
+      <span class="hint">↵</span>
     </div>
-
-    <div class="card wide"><h2>同業比較</h2>
-      <form id="peerForm" onsubmit="runPeer(event)" style="margin-bottom:12px">
-        <label>目標公司（代號）<input id="peer_target" value="2330"></label>
-        <label>同業代號（逗號分隔）<input id="peer_ids" value="2317, 2454, 2303"></label>
-        <button class="full" type="submit">執行同業比較</button>
-      </form>
-      <div id="peer" class="muted"></div>
-      <div id="peerChart" class="chart" style="margin-top:12px"></div>
+    <div class="authrow" id="authRow">
+      <input id="auth_user" placeholder="帳號">
+      <input id="auth_pass" type="password" placeholder="密碼">
+      <button class="btn" onclick="doLogin()">登入</button>
+      <button class="btn ghost" onclick="doRegister()">註冊</button>
+      <span id="authStatus" class="faint" style="font-size:11px"></span>
     </div>
+  </header>
 
-    <div class="card wide"><h2>投資組合（需登入）</h2>
-      <form id="pfForm" onsubmit="addPosition(event)" style="margin-bottom:12px">
-        <label>公司代號<input id="pf_cid" placeholder="2330"></label>
-        <label>股數<input id="pf_shares" type="number" step="0.01" placeholder="1000"></label>
-        <label>每股成本<input id="pf_cost" type="number" step="0.01" placeholder="500"></label>
-        <label>最新股價（選填）<input id="pf_price" type="number" step="0.01" placeholder="1000"></label>
-        <button class="full" type="submit">新增/更新部位</button>
-      </form>
-      <div id="pf" class="muted">登入後顯示投資組合</div>
-    </div>
+  <div class="entitybar">
+    <div class="entity" id="entityTitle"><span class="mono">—</span> <span class="meta">請選擇公司</span></div>
+    <div class="tabs" id="tabs"></div>
   </div>
+
+  <main>
+    <!-- ============ OVERVIEW ============ -->
+    <section class="view active" id="view-overview">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">ROE · 股東權益報酬率</div><div class="kpi-value" id="kRoe">—</div><div class="kpi-sub" id="kRoeSub">—</div><div class="kpi-bar" id="kRoeBar" style="width:0%"></div></div>
+        <div class="kpi"><div class="kpi-label">財務健康度</div><div class="kpi-value" id="kHealth">—<small>/100</small></div><div class="kpi-sub" id="kHealthSub">—</div><div class="kpi-bar" id="kHealthBar" style="width:0%"></div></div>
+        <div class="kpi"><div class="kpi-label">綜合風險分數</div><div class="kpi-value" id="kRisk">—</div><div class="kpi-sub" id="kRiskSub">—</div><div class="kpi-bar" id="kRiskBar" style="width:0%"></div></div>
+        <div class="kpi"><div class="kpi-label">Altman Z-Score</div><div class="kpi-value" id="kZ">—</div><div class="kpi-sub" id="kZSub">—</div><div class="kpi-bar" id="kZBar" style="width:0%"></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel"><div class="panel-title">營收與獲利趨勢 <span class="right" id="ovTrendNote"></span></div><div id="ovTrendChart" class="chart"></div></div>
+        <div class="panel"><div class="panel-title">風險四維度</div><div id="ovRiskChart" class="chart"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ FINANCIALS ============ -->
+    <section class="view" id="view-financials">
+      <div class="panel"><div class="panel-title">財務比率 <span class="right" id="finPeriod"></span></div><div id="finRatiosTable"></div></div>
+      <div class="panel"><div class="panel-title">獲利能力趨勢</div><div id="finMarginsChart" class="chart sm"></div></div>
+    </section>
+
+    <!-- ============ VALUATION ============ -->
+    <section class="view" id="view-valuation">
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">DCF · 現金流折現</div>
+          <div class="form-row">
+            <label class="f">折現率<input class="in" id="dcf_rate" type="number" step="0.01" value="0.10"></label>
+            <label class="f">終值成長率<input class="in" id="dcf_g" type="number" step="0.01" value="0.03"></label>
+            <label class="f">成長率（逗號分隔）<input class="in" id="dcf_growth" value="0.10, 0.08, 0.06, 0.05, 0.04"></label>
+          </div>
+          <button class="btn" onclick="runDcf()">執行 DCF</button>
+          <div id="dcfResult" class="muted" style="margin-top:12px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">DDM · 股利折現</div>
+          <div class="form-row">
+            <label class="f">每股股利<input class="in" id="ddm_div" type="number" step="0.01" value="15"></label>
+            <label class="f">股利成長率<input class="in" id="ddm_g" type="number" step="0.01" value="0.05"></label>
+            <label class="f">折現率<input class="in" id="ddm_r" type="number" step="0.01" value="0.09"></label>
+          </div>
+          <button class="btn" onclick="runDdm()">執行 DDM</button>
+          <div id="ddmResult" class="muted" style="margin-top:12px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">PEG · 成長性評價</div>
+          <div class="form-row">
+            <label class="f">本益比 PE<input class="in" id="peg_pe" type="number" step="0.1" value="25"></label>
+            <label class="f">EPS 成長率 %<input class="in" id="peg_g" type="number" step="0.1" value="20"></label>
+          </div>
+          <button class="btn" onclick="runPeg()">計算 PEG</button>
+          <div id="pegResult" class="muted" style="margin-top:12px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">蒙地卡羅 · DCF 風險模擬</div>
+          <div class="form-row">
+            <label class="f">模擬次數<input class="in" id="mc_n" type="number" step="100" value="1000"></label>
+            <label class="f">折現率標準差<input class="in" id="mc_sd" type="number" step="0.01" value="0.01"></label>
+          </div>
+          <button class="btn" onclick="runMonteCarlo()">執行模擬</button>
+          <div id="mcResult" class="muted" style="margin-top:12px"></div>
+          <div id="mcChart" class="chart sm" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PEERS ============ -->
+    <section class="view" id="view-peers">
+      <div class="panel">
+        <div class="panel-title">同業比較設定</div>
+        <div class="form-row">
+          <label class="f">目標公司<input class="in" id="peer_target" value="2330"></label>
+          <label class="f">同業代號（逗號分隔）<input class="in" id="peer_ids" value="2317, 2454, 2303"></label>
+        </div>
+        <button class="btn" onclick="runPeer()">執行同業比較</button>
+      </div>
+      <div class="panel"><div class="panel-title">ROE / ROA 比較</div><div id="peerChart" class="chart sm"></div></div>
+      <div class="panel"><div class="panel-title">比較結果</div><div id="peerResult" class="muted"></div></div>
+    </section>
+
+    <!-- ============ RISK ============ -->
+    <section class="view" id="view-risk">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">綜合風險分數</div><div class="kpi-value" id="rScore">—</div><div class="kpi-sub" id="rLevel"></div></div>
+        <div class="kpi"><div class="kpi-label">Altman Z-Score</div><div class="kpi-value" id="rZ">—</div><div class="kpi-sub" id="rZLevel"></div></div>
+        <div class="kpi"><div class="kpi-label">破產機率</div><div class="kpi-value" id="rProb">—</div><div class="kpi-sub">probability of bankruptcy</div></div>
+      </div>
+      <div class="panel"><div class="panel-title">四維度評分</div><div id="rDims"></div></div>
+      <div class="two-col">
+        <div class="panel"><div class="panel-title">關鍵風險</div><div id="rConcerns"></div></div>
+        <div class="panel"><div class="panel-title">改善建議</div><div id="rRecs"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ REPORTS ============ -->
+    <section class="view" id="view-reports">
+      <div class="panel">
+        <div class="panel-title">報告生成</div>
+        <div class="form-row">
+          <label class="f">類型
+            <select class="in" id="rep_type"><option value="comprehensive">Comprehensive</option><option value="summary">Summary</option></select>
+          </label>
+          <label class="f">格式
+            <select class="in" id="rep_format"><option value="markdown">Markdown</option><option value="pdf">PDF</option></select>
+          </label>
+        </div>
+        <button class="btn" onclick="runReport()">產生報告</button>
+        <button class="btn ghost" onclick="runExcel()">匯出 Excel</button>
+        <div id="reportStatus" class="muted" style="margin-top:10px"></div>
+      </div>
+      <div class="panel"><div class="panel-title">預覽</div><textarea class="pre" id="reportPreview" placeholder="Markdown 報告會顯示於此；PDF/Excel 產生後自動下載"></textarea></div>
+    </section>
+
+    <!-- ============ PORTFOLIO ============ -->
+    <section class="view" id="view-portfolio">
+      <div class="panel">
+        <div class="panel-title">投資組合 <span class="right" id="pfAuthNote">需登入</span></div>
+        <div class="form-row">
+          <label class="f">公司代號<input class="in" id="pf_cid" placeholder="2330"></label>
+          <label class="f">股數<input class="in" id="pf_shares" type="number" step="0.01" placeholder="1000"></label>
+          <label class="f">每股成本<input class="in" id="pf_cost" type="number" step="0.01" placeholder="500"></label>
+          <label class="f">最新股價（選填）<input class="in" id="pf_price" type="number" step="0.01"></label>
+        </div>
+        <button class="btn" onclick="addPosition()">新增 / 更新部位</button>
+      </div>
+      <div class="panel"><div class="panel-title">部位與損益</div><div id="pfResult" class="muted">登入後顯示</div></div>
+    </section>
+  </main>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const API = "/api/v1";
 const $ = (id) => document.getElementById(id);
-let trendChart, riskChart, peerChart;
-function initCharts() {
-  trendChart = echarts.init($("trendChart"), "dark");
-  riskChart = echarts.init($("riskChart"), "dark");
-  peerChart = echarts.init($("peerChart"), "dark");
+const VIEWS = ["overview","financials","valuation","peers","risk","reports","portfolio"];
+const VIEW_NAMES = {overview:"總覽", financials:"財務", valuation:"估值", peers:"同業", risk:"風險", reports:"報告", portfolio:"投資組合"};
+const state = { company: null, view: "overview", token: localStorage.getItem("aev_token") || "" };
+const charts = {};
+
+function toast(msg, ms=2600) {
+  const t = $("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms);
 }
 
 async function api(path, opts) {
@@ -126,261 +381,393 @@ async function api(path, opts) {
   }
   return r.json();
 }
+const authH = () => state.token ? { "Authorization": "Bearer " + state.token } : {};
+function fmt(n, d=2) { return (n === null || n === undefined) ? "—" : Number(n).toLocaleString("zh-TW", { maximumFractionDigits: d }); }
+function pct(n) { return (n === null || n === undefined) ? "—" : (n*100).toFixed(2) + "%"; }
+function barColor(v) { return v >= 80 ? "var(--green)" : v >= 50 ? "var(--amber)" : "var(--red)"; }
 
-function fmt(n, d=2) {
-  if (n === null || n === undefined) return "—";
-  return Number(n).toLocaleString("zh-TW", { maximumFractionDigits: d });
+/* ---------------- Shell ---------------- */
+function initCharts() {
+  charts.ovTrend = echarts.init($("ovTrendChart"), null, {renderer:"canvas"});
+  charts.ovRisk = echarts.init($("ovRiskChart"));
+  charts.margins = echarts.init($("finMarginsChart"));
+  charts.peer = echarts.init($("peerChart"));
+  charts.mc = echarts.init($("mcChart"));
+  window.addEventListener("resize", () => Object.values(charts).forEach(c => c.resize()));
+}
+function baseAxis(extra={}) {
+  return Object.assign({
+    axisLine: { lineStyle: { color: "#26334a" } },
+    axisLabel: { color: "#8b98ab", fontSize: 11 },
+    splitLine: { lineStyle: { color: "#1a2334" } },
+  }, extra);
+}
+function initShell() {
+  const tabs = $("tabs");
+  tabs.innerHTML = VIEWS.map(v => `<button data-view="${v}" class="${v===state.view?'active':''}">${VIEW_NAMES[v]}</button>`).join("");
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setView(b.dataset.view));
+  document.querySelectorAll(".rail button[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
+  if (state.token) { $("authStatus").textContent = "已登入"; }
+}
+function setView(v) {
+  state.view = v;
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("active", s.id === "view-" + v));
+  document.querySelectorAll(".rail button[data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  const fns = {overview:viewOverview, financials:viewFinancials, valuation:viewValuation, peers:viewPeers, risk:viewRisk, reports:viewReports, portfolio:viewPortfolio};
+  (fns[v] || (()=>{}))();
 }
 
+/* ---------------- Search / entity ---------------- */
 async function search() {
-  const kw = $("q").value.trim();
-  if (!kw) return;
-  const res = await api(`/companies/search?keyword=${encodeURIComponent(kw)}`);
-  const list = res.data || [];
-  const sel = $("companySelect");
-  sel.innerHTML = '<option value="">— 選擇公司 —</option>' +
-    list.map(c => `<option value="${c.company_id}">${c.company_id} ${c.company_name}（${c.market_type || ""}）</option>`).join("");
-  if (list.length === 1) selectCompany(list[0].company_id);
-}
-
-async function selectCompany(id) {
-  if (!id) return;
+  const kw = $("q").value.trim(); if (!kw) return;
   try {
-    await loadCompany(id);
-    await loadHealth(id);
-    await loadRatios(id);
-    await loadTrend(id);
-    await loadRisk(id);
+    const res = await api(`/companies/search?keyword=${encodeURIComponent(kw)}`);
+    const list = res.data || [];
+    if (list.length === 0) { toast("找不到符合的公司"); return; }
+    selectCompany(list[0].company_id, list[0].company_name);
+    if (list.length > 1) toast(`找到 ${list.length} 家，已選取 ${list[0].company_name}`);
+  } catch (e) { toast(e.message); }
+}
+async function selectCompany(id, name) {
+  state.company = { id, name: name || id };
+  $("q").value = id;
+  try {
+    const r = await api(`/companies/${id}`);
+    const c = r.data || {};
+    state.company.info = c;
+    $("entityTitle").innerHTML = `<span class="mono">${c.company_id}</span> ${c.company_name} <span class="meta">${c.industry_name || c.industry_code || "—"} · ${c.market_type || "—"} · 上市日 ${c.listing_date || "—"}</span>`;
   } catch (e) {
-    document.querySelectorAll("#companyInfo,#health,#ratios,#risk").forEach(d => d.innerHTML = "");
-    $("companyInfo").innerHTML = `<span class="error">${e.message}</span>`;
+    $("entityTitle").innerHTML = `<span class="mono">${id}</span> ${name || ""} <span class="meta">${e.message}</span>`;
   }
+  setView(state.view);
 }
 
-async function loadCompany(id) {
-  const r = await api(`/companies/${id}`);
-  const c = r.data || {};
-  $("companyInfo").innerHTML = `
-    <b>代號</b><span>${c.company_id}</span>
-    <b>名稱</b><span>${c.company_name}</span>
-    <b>產業</b><span>${c.industry_name || c.industry_code || "—"}</span>
-    <b>市場</b><span>${c.market_type || "—"}</span>
-    <b>上市日</b><span>${c.listing_date || "—"}</span>
-    <b>資本額</b><span>${fmt(c.capital_amount)}</span>`;
-}
+/* ---------------- Overview ---------------- */
+async function viewOverview() {
+  const id = state.company?.id; if (!id) return;
+  const [ratiosR, healthR, riskR, trendR] = await Promise.allSettled([
+    api(`/financials/${id}/ratios`), api(`/financials/${id}/health`),
+    api("/analysis/risk-assessment", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({company_id:id})}),
+    api(`/financials/${id}/trend?periods=4`),
+  ]);
+  const ratios = ratiosR.status==="fulfilled" ? ratiosR.value.data||{} : {};
+  const health = healthR.status==="fulfilled" ? healthR.value.data||{} : {};
+  const risk = riskR.status==="fulfilled" ? riskR.value.data||{} : {};
+  const trend = trendR.status==="fulfilled" ? trendR.value.data||{} : {};
 
-async function loadHealth(id) {
-  const r = await api(`/financials/${id}/health`);
-  const d = r.data || {};
-  const cls = (d.overall_grade === "優秀" || d.overall_grade === "良好") ? "good" : (d.overall_grade === "不佳" || d.overall_grade === "危險") ? "bad" : "warn";
-  $("health").innerHTML = `
-    <div style="font-size:26px;font-weight:700;margin-bottom:8px">${fmt(d.overall_score)} <span style="font-size:14px">/ 100</span></div>
-    <span class="badge ${cls}">${d.overall_grade || "—"}</span>
-    <div class="kv" style="margin-top:10px">
-      ${Object.entries(d.detailed_scores || {}).map(([k,v]) => `<b>${k}</b><span>${fmt(v)}</span>`).join("")}
-    </div>
-    ${(d.strengths || []).length ? "<ul>" + d.strengths.map(s => `<li>✅ ${s}</li>`).join("") + "</ul>" : ""}
-    ${(d.recommendations || []).length ? "<ul>" + d.recommendations.map(s => `<li>💡 ${s}</li>`).join("") + "</ul>" : ""}`;
-}
+  const roe = ratios.roe ?? null;
+  $("kRoe").innerHTML = roe!=null ? pct(roe) : "—";
+  $("kRoeSub").textContent = `ROA ${pct(ratios.roa ?? null)} · 淨利率 ${pct(ratios.net_margin ?? null)}`;
+  $("kRoeBar").style.width = Math.min(100, (roe||0)*350) + "%";
+  $("kHealth").innerHTML = fmt(health.overall_score) + "<small>/100</small>";
+  $("kHealthSub").textContent = health.overall_grade || "—";
+  $("kHealthBar").style.width = Math.min(100, health.overall_score||0) + "%";
+  $("kRisk").textContent = fmt(risk.overall_risk_score);
+  $("kRiskSub").textContent = `${risk.risk_grade || "—"} · ${risk.risk_level || "—"}`;
+  $("kRiskBar").style.width = Math.min(100, risk.overall_risk_score||0) + "%";
+  const zd = risk.risk_breakdown?.financial_distress || {};
+  $("kZ").textContent = fmt(zd.z_score);
+  $("kZSub").textContent = zd.risk_level || "—";
+  $("kZBar").style.width = Math.min(100, (zd.z_score||0)*12) + "%";
 
-async function loadRatios(id) {
-  const r = await api(`/financials/${id}/ratios`);
-  const d = r.data || {};
-  const pctRows = [
-    ["負債比率", "debt_to_asset_ratio", 0], ["ROA", "roa", 1], ["ROE", "roe", 1], ["毛利率", "gross_margin", 1],
-    ["營業利益率", "operating_margin", 1], ["淨利率", "net_margin", 1],
-  ];
-  const numRows = [["流動比率", "current_ratio"], ["速動比率", "quick_ratio"], ["本益比", "pe_ratio"], ["股價淨值比", "pb_ratio"], ["EV/EBITDA", "ev_ebitda"]];
-  const cell = (k, isPct) => d[k] !== null && d[k] !== undefined ? (isPct ? (d[k]*100).toFixed(2)+"%" : fmt(d[k])) : "—";
-  $("ratios").innerHTML = `<div class="muted">期別：${r.year_quarter || "latest"}</div>
-    <table>
-      <tr>${pctRows.map(([k]) => `<th>${k}</th>`).join("")}${numRows.map(([k]) => `<th>${k}</th>`).join("")}</tr>
-      <tr>${pctRows.map(([,k,i]) => `<td>${cell(k,i)}</td>`).join("")}${numRows.map(([,k]) => `<td>${cell(k,0)}</td>`).join("")}</tr>
-    </table>`;
-}
-
-async function loadTrend(id) {
-  const r = await api(`/financials/${id}/trend?periods=4`);
-  const d = r.data || {};
-  const st = (d.statements_trend || []).slice().reverse();
-  const periods = st.map(x => x.period);
-  trendChart.setOption({
-    backgroundColor: "transparent",
-    tooltip: { trigger: "axis" },
-    legend: { data: ["營收", "淨利"], textStyle: { color: "#94a3b8" } },
-    grid: { left: 70, right: 20, top: 40, bottom: 30 },
-    xAxis: { type: "category", data: periods, axisLabel: { color: "#94a3b8" } },
-    yAxis: { type: "value", axisLabel: { color: "#94a3b8", formatter: v => (v/1e6).toFixed(0)+"M" } },
-    series: [
-      { name: "營收", type: "bar", data: st.map(x => x.revenue), itemStyle: { color: "#38bdf8" } },
-      { name: "淨利", type: "line", data: st.map(x => x.net_income), itemStyle: { color: "#4ade80" } },
+  const st = (trend.statements_trend || []).slice().reverse();
+  charts.ovTrend.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"axis", backgroundColor:"#131a26", borderColor:"#26334a", textStyle:{color:"#d8e1ec", fontSize:12}},
+    legend:{data:["營收","淨利"], textStyle:{color:"#8b98ab"}},
+    grid:{left:70, right:20, top:36, bottom:28},
+    xAxis:baseAxis({type:"category", data:st.map(x=>x.period)}),
+    yAxis:baseAxis({type:"value", axisLabel:{color:"#8b98ab", formatter:v=>(v/1e6).toFixed(0)+"M"}}),
+    series:[
+      {name:"營收", type:"bar", data:st.map(x=>x.revenue), itemStyle:{color:"#4f9df7"}, barMaxWidth:26},
+      {name:"淨利", type:"line", data:st.map(x=>x.net_income), itemStyle:{color:"#34d399"}, lineStyle:{width:2}, symbolSize:5},
     ],
   });
-  const g = d.growth_analysis || {};
-  $("trendNote").textContent = `營收成長 ${g.revenue_growth ?? "—"}%｜淨利成長 ${g.net_income_growth ?? "—"}%｜${d.trend_summary?.revenue_trend || ""}`;
-}
-
-async function loadRisk(id) {
-  const r = await api("/analysis/risk-assessment", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ company_id: id }) });
-  const d = r.data || {};
-  const b = d.risk_breakdown || {};
-  const distress = b.financial_distress || {};
-  const scores = {
-    "財務危機": distress.score ?? 0,
-    "流動性": b.liquidity?.liquidity_score ?? 0,
-    "獲利趨勢": b.profitability_trend?.score ?? 0,
-    "槓桿": b.leverage?.score ?? 0,
-  };
-  riskChart.setOption({
-    backgroundColor: "transparent",
-    radar: {
-      indicator: Object.keys(scores).map(k => ({ name: k, max: 100 })),
-      axisName: { color: "#94a3b8" },
+  const g = trend.growth_analysis || {};
+  $("ovTrendNote").textContent = `營收成長 ${g.revenue_growth ?? "—"}% · 淨利成長 ${g.net_income_growth ?? "—"}%`;
+  const b = risk.risk_breakdown || {};
+  charts.ovRisk.setOption({
+    backgroundColor:"transparent",
+    radar:{
+      indicator:["財務危機","流動性","獲利趨勢","槓桿"].map(n=>({name:n, max:100})),
+      axisName:{color:"#8b98ab"}, splitLine:{lineStyle:{color:"#1a2334"}}, splitArea:{areaStyle:{color:["rgba(79,157,247,0.02)","rgba(79,157,247,0.05)"]}},
     },
-    series: [{ type: "radar", data: [{ value: Object.values(scores), name: id, areaStyle: { opacity: 0.3 }, itemStyle: { color: "#38bdf8" } }] }],
+    series:[{type:"radar", data:[{value:[
+      b.financial_distress?.score ?? 0, b.liquidity?.liquidity_score ?? 0,
+      b.profitability_trend?.score ?? 0, b.leverage?.score ?? 0,
+    ], name:id, areaStyle:{color:"rgba(79,157,247,0.25)"}, lineStyle:{color:"#4f9df7"}, itemStyle:{color:"#22d3ee"}}]}],
   });
-  $("risk").innerHTML = `
-    <div style="font-size:26px;font-weight:700">${fmt(d.overall_risk_score)}</div>
-    <span class="badge ${(d.risk_grade === "A" || d.risk_grade === "B") ? "good" : (d.risk_grade === "F" ? "bad" : "warn")}">${d.risk_grade || "—"} · ${d.risk_level || "—"}</span>
-    <div class="kv" style="margin-top:10px"><b>Altman Z-Score</b><span>${fmt(distress.z_score)}</span></div>
-    ${(d.key_concerns || []).length ? "<ul>" + d.key_concerns.map(c => `<li>⚠️ ${c}</li>`).join("") + "</ul>" : ""}`;
 }
 
-async function runDcf(e) {
-  e.preventDefault();
-  const id = $("companySelect").value;
-  if (!id) { $("dcf").innerHTML = '<span class="error">請先選擇公司</span>'; return; }
-  const growth = $("dcf_growth").value.split(",").map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+/* ---------------- Financials ---------------- */
+async function viewFinancials() {
+  const id = state.company?.id; if (!id) return;
+  const [ratiosR, trendR] = await Promise.allSettled([
+    api(`/financials/${id}/ratios`), api(`/financials/${id}/trend?periods=4`),
+  ]);
+  const d = ratiosR.status==="fulfilled" ? ratiosR.value.data||{} : {};
+  const trend = trendR.status==="fulfilled" ? trendR.value.data||{} : {};
+  const rows = [
+    ["財務結構","debt_to_asset_ratio","負債比率",1], ["財務結構","debt_to_equity_ratio","負債權益比",1], ["財務結構","equity_ratio","權益比率",1],
+    ["償債能力","current_ratio","流動比率",0], ["償債能力","quick_ratio","速動比率",0], ["償債能力","cash_ratio","現金比率",0], ["償債能力","interest_coverage_ratio","利息保障倍數",0],
+    ["經營效率","receivables_turnover","應收週轉",0], ["經營效率","inventory_turnover","存貨週轉",0], ["經營效率","total_asset_turnover","總資產週轉",0],
+    ["獲利能力","roa","ROA",1], ["獲利能力","roe","ROE",1], ["獲利能力","roic","ROIC",1], ["獲利能力","gross_margin","毛利率",1], ["獲利能力","operating_margin","營業利益率",1], ["獲利能力","net_margin","淨利率",1],
+    ["市場評價","pe_ratio","本益比",0], ["市場評價","pb_ratio","股價淨值比",0], ["市場評價","ev_ebitda","EV/EBITDA",0],
+  ];
+  const cats = [...new Set(rows.map(r=>r[0]))];
+  $("finRatiosTable").innerHTML = cats.map(cat => `
+    <div class="panel-title" style="margin-top:14px">${cat}</div>
+    <table class="t"><tr><th>指標</th><th>數值</th></tr>
+      ${rows.filter(r=>r[0]===cat).map(([,k,label,p])=>`<tr><td>${label}</td><td class="mono">${d[k]!=null?(p?pct(d[k]):fmt(d[k])):"—"}</td></tr>`).join("")}
+    </table>`).join("");
+  const rt = (trend.ratios_trend || []).slice().reverse();
+  charts.margins.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"axis", backgroundColor:"#131a26", borderColor:"#26334a", textStyle:{color:"#d8e1ec"}},
+    legend:{textStyle:{color:"#8b98ab"}, data:["毛利率","營業利益率","淨利率","ROE"]},
+    grid:{left:60, right:20, top:36, bottom:28},
+    xAxis:baseAxis({type:"category", data:rt.map(x=>x.period)}),
+    yAxis:baseAxis({type:"value", axisLabel:{color:"#8b98ab", formatter:v=>(v*100).toFixed(0)+"%"}}),
+    series:[
+      {name:"毛利率", type:"line", data:rt.map(x=>x.gross_margin), itemStyle:{color:"#4f9df7"}},
+      {name:"營業利益率", type:"line", data:rt.map(x=>x.operating_margin), itemStyle:{color:"#22d3ee"}},
+      {name:"淨利率", type:"line", data:rt.map(x=>x.net_margin), itemStyle:{color:"#34d399"}},
+      {name:"ROE", type:"line", data:rt.map(x=>x.roe), itemStyle:{color:"#fbbf24"}},
+    ],
+  });
+}
+
+/* ---------------- Valuation ---------------- */
+function viewValuation() {}
+async function runDcf() {
+  const id = state.company?.id; if (!id) return toast("請先選擇公司");
+  const growth = $("dcf_growth").value.split(",").map(s=>parseFloat(s.trim())).filter(n=>!isNaN(n));
   try {
-    const body = {
-      company_id: id,
-      discount_rate: parseFloat($("dcf_rate").value),
-      terminal_growth_rate: parseFloat($("dcf_g").value),
-      revenue_growth_rates: growth,
-      ebitda_margin: 0.15, tax_rate: 0.25, capex_rate: 0.04, working_capital_rate: 0.02,
-      sensitivity_analysis: true,
-    };
-    const r = await api("/analysis/dcf", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
-    const d = (r.data || {}).valuation || {};
-    $("dcf").innerHTML = `
-      <div style="font-size:24px;font-weight:700">公允價值每股 <span style="color:var(--good)">${fmt(d.fair_value_per_share)} 元</span></div>
-      <div class="kv" style="margin-top:8px">
-        <b>企業價值</b><span>${fmt(d.enterprise_value)}</span>
-        <b>股權價值</b><span>${fmt(d.equity_value)}</span>
-        <b>上漲空間</b><span>${d.upside_downside != null ? fmt(d.upside_downside) + "%" : "—"}</span>
-        <b>終值占比</b><span>${d.terminal_value_percentage != null ? fmt(d.terminal_value_percentage) + "%" : "—"}</span>
+    const r = await api("/analysis/dcf", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+      company_id:id, discount_rate:parseFloat($("dcf_rate").value), terminal_growth_rate:parseFloat($("dcf_g").value),
+      revenue_growth_rates:growth, ebitda_margin:0.15, tax_rate:0.25, capex_rate:0.04, working_capital_rate:0.02, sensitivity_analysis:true,
+    })});
+    const d = (r.data||{}).valuation || {};
+    $("dcfResult").innerHTML = `
+      <div class="big-num" style="color:var(--accent)">${fmt(d.fair_value_per_share)} <span class="muted" style="font-size:13px">元 / 股</span></div>
+      <div class="kv" style="margin-top:10px">
+        <b>企業價值</b><span class="mono">${fmt(d.enterprise_value)}</span>
+        <b>股權價值</b><span class="mono">${fmt(d.equity_value)}</span>
+        <b>上漲空間</b><span class="mono ${(d.upside_downside??0)>=0?'pos':'neg'}">${d.upside_downside!=null?fmt(d.upside_downside)+"%":"—"}</span>
+        <b>終值占比</b><span class="mono">${d.terminal_value_percentage!=null?fmt(d.terminal_value_percentage)+"%":"—"}</span>
       </div>`;
-  } catch (err) {
-    $("dcf").innerHTML = `<span class="error">${err.message}</span>`;
-  }
+  } catch (e) { $("dcfResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+}
+async function runDdm() {
+  const id = state.company?.id; if (!id) return toast("請先選擇公司");
+  try {
+    const r = await api("/valuation/ddm", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+      company_id:id, current_dividend:parseFloat($("ddm_div").value), dividend_growth_rate:parseFloat($("ddm_g").value),
+      discount_rate:parseFloat($("ddm_r").value), stable_growth_rate:0.03,
+    })});
+    const d = r.data||{};
+    $("ddmResult").innerHTML = `<div class="big-num" style="color:var(--cyan)">${fmt(d.fair_value_per_share)} <span class="muted" style="font-size:13px">元 / 股</span></div>
+      <div class="faint" style="margin-top:6px">方法：${d.valuation_method} · 假設 股利成長 ${pct(d.assumptions?.dividend_growth_rate)}</div>`;
+  } catch (e) { $("ddmResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+}
+async function runPeg() {
+  const id = state.company?.id; if (!id) return toast("請先選擇公司");
+  try {
+    const r = await api("/valuation/peg", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+      company_id:id, pe_ratio:parseFloat($("peg_pe").value), eps_growth_rate:parseFloat($("peg_g").value),
+    })});
+    const d = r.data||{};
+    const cls = d.rating==="低估"?"good":d.rating==="合理"?"info":"bad";
+    $("pegResult").innerHTML = `<div class="big-num" style="color:var(--amber)">${d.peg}</div>
+      <span class="badge ${cls}" style="margin-top:8px">${d.rating}</span>`;
+  } catch (e) { $("pegResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+}
+async function runMonteCarlo() {
+  const id = state.company?.id; if (!id) return toast("請先選擇公司");
+  try {
+    const r = await api("/valuation/monte-carlo", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+      company_id:id, simulations:parseInt($("mc_n").value)||500, discount_rate_std:parseFloat($("mc_sd").value)||0.01, seed:42,
+    })});
+    const d = r.data||{};
+    const p = d.percentiles||{};
+    $("mcResult").innerHTML = `
+      <div class="kv">
+        <b>均值</b><span class="mono">${fmt(d.mean)}</span>
+        <b>中位數</b><span class="mono">${fmt(d.median)}</span>
+        <b>標準差</b><span class="mono">${fmt(d.std_dev)}</span>
+        <b>5% / 95%</b><span class="mono">${fmt(p.p5)} ~ ${fmt(p.p95)}</span>
+        <b>高於現價機率</b><span class="mono">${d.probability_above_current_price!=null?(d.probability_above_current_price*100).toFixed(1)+"%":"—"}</span>
+      </div>`;
+    charts.mc.setOption({
+      backgroundColor:"transparent",
+      grid:{left:60,right:20,top:20,bottom:28},
+      xAxis:baseAxis({type:"category", data:["p5","p25","p50","p75","p95"]}),
+      yAxis:baseAxis({type:"value", axisLabel:{color:"#8b98ab"}}),
+      series:[{type:"bar", data:[p.p5,p.p25,p.p50,p.p75,p.p95].map(v=>({value:v, itemStyle:{color:"#4f9df7"}})), barMaxWidth:34, label:{show:true, position:"top", color:"#8b98ab", fontSize:10, formatter:v=>fmt(v.value,0)}}],
+    });
+  } catch (e) { $("mcResult").innerHTML = `<span class="neg">${e.message}</span>`; }
 }
 
-async function runPeer(e) {
-  e.preventDefault();
+/* ---------------- Peers ---------------- */
+function viewPeers() {}
+async function runPeer() {
   const target = $("peer_target").value.trim();
-  const ids = $("peer_ids").value.split(",").map(s => s.trim()).filter(Boolean);
-  if (!target || ids.length === 0) { $("peer").innerHTML = '<span class="error">請輸入目標與同業代號</span>'; return; }
+  const ids = $("peer_ids").value.split(",").map(s=>s.trim()).filter(Boolean);
+  if (!target || !ids.length) return toast("請輸入目標與同業代號");
   try {
-    const r = await api("/analysis/peer-comparison/auto", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ target_company_id: target, peer_company_ids: ids }) });
-    const d = r.data || {};
-    const es = d.executive_summary || {};
-    const ratings = d.performance_overview?.ratings || {};
-    const bm = d.industry_comparison?.key_benchmarks || {};
-    const peers = d.peer_companies || [];
-    $("peer").innerHTML = `
-      <div style="font-size:22px;font-weight:700">綜合評分 <span style="color:var(--good)">${es.composite_score ?? "—"}</span> <span class="muted">/ 100</span></div>
-      <div class="kv" style="margin-top:8px">
-        ${Object.entries(ratings).map(([k,v]) => `<b>${k}</b><span>${v}</span>`).join("")}
-        <b>同業平均 ROE</b><span>${bm.avg_roe ?? "—"}%</span>
-        <b>同業平均負債比</b><span>${bm.avg_debt_ratio ?? "—"}%</span>
+    const r = await api("/analysis/peer-comparison/auto", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({target_company_id:target, peer_company_ids:ids})});
+    const d = r.data||{};
+    const es = d.executive_summary||{}, ratings = d.performance_overview?.ratings||{}, bm = d.industry_comparison?.key_benchmarks||{}, peers = d.peer_companies||[];
+    $("peerResult").innerHTML = `
+      <div style="display:flex; gap:24px; align-items:baseline; margin-bottom:12px">
+        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">COMPOSITE</div><div class="big-num" style="color:var(--green)">${es.composite_score ?? "—"}</div></div>
+        <div class="kv">
+          ${Object.entries(ratings).map(([k,v])=>`<b>${k}</b><span>${v}</span>`).join("")}
+          <b>同業平均 ROE</b><span class="mono">${bm.avg_roe ?? "—"}%</span>
+          <b>同業平均負債比</b><span class="mono">${bm.avg_debt_ratio ?? "—"}%</span>
+        </div>
       </div>
-      <table style="margin-top:8px">
-        <tr><th>公司</th><th>ROE</th><th>ROA</th><th>流動比</th><th>負債比</th></tr>
-        ${peers.map(p => `<tr><td>${p.company_id} ${p.company_name}</td><td>${p.key_ratios?.roe}%</td><td>${p.key_ratios?.roa}%</td><td>${p.key_ratios?.current_ratio}</td><td>${p.key_ratios?.debt_ratio}%</td></tr>`).join("")}
+      <table class="t"><tr><th>公司</th><th>ROE</th><th>ROA</th><th>流動比</th><th>負債比</th></tr>
+        ${peers.map(p=>`<tr><td>${p.company_id} <span class="muted">${p.company_name}</span></td><td>${p.key_ratios?.roe}%</td><td>${p.key_ratios?.roa}%</td><td>${p.key_ratios?.current_ratio}</td><td>${p.key_ratios?.debt_ratio}%</td></tr>`).join("")}
       </table>
-      ${(d.swot_analysis?.strengths || []).length ? "<ul>" + d.swot_analysis.strengths.map(s => `<li>💪 ${s}</li>`).join("") + "</ul>" : ""}
-      ${(d.swot_analysis?.weaknesses || []).length ? "<ul>" + d.swot_analysis.weaknesses.map(s => `<li>⚠️ ${s}</li>`).join("") + "</ul>" : ""}`;
-    peerChart.setOption({
-      backgroundColor: "transparent",
-      tooltip: { trigger: "axis" },
-      legend: { textStyle: { color: "#94a3b8" } },
-      grid: { left: 60, right: 20, top: 40, bottom: 40 },
-      xAxis: { type: "category", data: peers.map(p => `${p.company_id}`), axisLabel: { color: "#94a3b8" } },
-      yAxis: { type: "value", axisLabel: { color: "#94a3b8" } },
-      series: [
-        { name: "ROE%", type: "bar", data: peers.map(p => p.key_ratios?.roe), itemStyle: { color: "#38bdf8" } },
-        { name: "ROA%", type: "bar", data: peers.map(p => p.key_ratios?.roa), itemStyle: { color: "#4ade80" } },
+      <div class="two-col" style="margin-top:12px">
+        <div><div class="panel-title">STRENGTHS</div><ul class="tight">${(d.swot_analysis?.strengths||[]).map(s=>`<li><span class="pos">+</span> ${s}</li>`).join("")||"<li class='faint'>—</li>"}</ul></div>
+        <div><div class="panel-title">WEAKNESSES & ADVICE</div><ul class="tight">${(d.swot_analysis?.weaknesses||[]).map(s=>`<li><span class="neg">−</span> ${s}</li>`).join("")}${(d.swot_analysis?.recommendations||[]).map(s=>`<li><span class="muted">·</span> ${s}</li>`).join("")}</ul></div>
+      </div>`;
+    charts.peer.setOption({
+      backgroundColor:"transparent",
+      tooltip:{trigger:"axis", backgroundColor:"#131a26", borderColor:"#26334a", textStyle:{color:"#d8e1ec"}},
+      legend:{textStyle:{color:"#8b98ab"}, data:["ROE%","ROA%"]},
+      grid:{left:60,right:20,top:36,bottom:28},
+      xAxis:baseAxis({type:"category", data:peers.map(p=>p.company_id)}),
+      yAxis:baseAxis({type:"value", axisLabel:{color:"#8b98ab"}}),
+      series:[
+        {name:"ROE%", type:"bar", data:peers.map(p=>p.key_ratios?.roe), itemStyle:{color:"#4f9df7"}, barMaxWidth:22},
+        {name:"ROA%", type:"bar", data:peers.map(p=>p.key_ratios?.roa), itemStyle:{color:"#34d399"}, barMaxWidth:22},
       ],
     });
-  } catch (err) {
-    $("peer").innerHTML = `<span class="error">${err.message}</span>`;
-  }
+  } catch (e) { $("peerResult").innerHTML = `<span class="neg">${e.message}</span>`; }
 }
 
-// ---------------- 認證與投資組合 ----------------
-let TOKEN = localStorage.getItem("aev_token") || "";
-function authHeaders() { return TOKEN ? { "Authorization": "Bearer " + TOKEN } : {}; }
+/* ---------------- Risk ---------------- */
+async function viewRisk() {
+  const id = state.company?.id; if (!id) return;
+  try {
+    const r = await api("/analysis/risk-assessment", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({company_id:id})});
+    const d = r.data||{}, b = d.risk_breakdown||{};
+    const zd = b.financial_distress||{};
+    $("rScore").textContent = fmt(d.overall_risk_score);
+    $("rLevel").innerHTML = `<span class="badge ${(d.risk_grade==="A"||d.risk_grade==="B")?"good":(d.risk_grade==="F"?"bad":"warn")}">${d.risk_grade} · ${d.risk_level}</span>`;
+    $("rZ").textContent = fmt(zd.z_score);
+    $("rZLevel").textContent = zd.risk_level || "—";
+    $("rProb").textContent = zd.probability_of_bankruptcy!=null ? (zd.probability_of_bankruptcy*100).toFixed(1)+"%" : "—";
+    const dims = [
+      ["財務危機", zd.score ?? 0, `${zd.risk_level || ""} · Z=${fmt(zd.z_score)}`],
+      ["流動性", b.liquidity?.liquidity_score ?? 0, b.liquidity?.liquidity_rating || ""],
+      ["獲利趨勢", b.profitability_trend?.score ?? 0, b.profitability_trend?.trend || ""],
+      ["槓桿", b.leverage?.score ?? 0, b.leverage?.leverage_rating || `負債比 ${fmt(b.leverage?.debt_to_asset_ratio)}%`],
+    ];
+    $("rDims").innerHTML = dims.map(([n,v,sub])=>`
+      <div class="scorebar-row"><span class="muted">${n}</span>
+        <div class="dimbar"><i style="width:${Math.min(100,v)}%;background:${barColor(v)}"></i></div>
+        <span class="mono">${fmt(v)}</span></div>
+      <div class="faint" style="margin:-6px 0 10px 120px; font-size:11px">${sub}</div>`).join("");
+    $("rConcerns").innerHTML = (d.key_concerns||[]).length ? `<ul class="tight">${d.key_concerns.map(c=>`<li><span class="neg">⚠</span> ${c}</li>`).join("")}</ul>` : "<span class='faint'>無重大風險</span>";
+    $("rRecs").innerHTML = (d.recommendations||[]).length ? `<ul class="tight">${d.recommendations.map(c=>`<li><span class="pos">→</span> ${c}</li>`).join("")}</ul>` : "<span class='faint'>—</span>";
+  } catch (e) { $("rConcerns").innerHTML = `<span class="neg">${e.message}</span>`; }
+}
 
+/* ---------------- Reports ---------------- */
+function viewReports() {}
+function downloadB64(b64, filename) {
+  const a = document.createElement("a");
+  a.href = "data:application/octet-stream;base64," + b64;
+  a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+}
+async function runReport() {
+  const id = state.company?.id; if (!id) return toast("請先選擇公司");
+  const format = $("rep_format").value, rtype = $("rep_type").value;
+  try {
+    const r = await api("/reports/generate", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({company_id:id, report_type:rtype, format})});
+    const d = r.data||{};
+    if (format === "pdf") { downloadB64(d.content_base64, d.filename); $("reportStatus").textContent = `✅ 已下載 ${d.filename}`; }
+    else { $("reportPreview").value = d.content; $("reportStatus").textContent = "✅ Markdown 已產生（見預覽）"; }
+  } catch (e) { $("reportStatus").innerHTML = `<span class="neg">${e.message}</span>`; }
+}
+async function runExcel() {
+  const id = state.company?.id; if (!id) return toast("請先選擇公司");
+  try {
+    const r = await api("/reports/export-excel", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({company_id:id})});
+    downloadB64(r.data.content_base64, r.data.filename);
+    $("reportStatus").textContent = `✅ 已下載 ${r.data.filename}`;
+  } catch (e) { $("reportStatus").innerHTML = `<span class="neg">${e.message}</span>`; }
+}
+
+/* ---------------- Auth & Portfolio ---------------- */
 async function doLogin() {
   try {
-    const r = await api("/auth/login", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ username: $("auth_user").value, password: $("auth_pass").value }) });
-    TOKEN = r.access_token;
-    localStorage.setItem("aev_token", TOKEN);
-    $("authStatus").textContent = "✅ 已登入：" + $("auth_user").value;
-    loadPortfolio();
-  } catch (e) { $("authStatus").textContent = "❌ " + e.message; }
+    const r = await api("/auth/login", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username:$("auth_user").value, password:$("auth_pass").value})});
+    state.token = r.access_token; localStorage.setItem("aev_token", state.token);
+    $("authStatus").textContent = "已登入"; toast("登入成功");
+    if (state.view === "portfolio") viewPortfolio();
+  } catch (e) { toast("登入失敗：" + e.message); }
 }
-
 async function doRegister() {
   try {
-    const r = await api("/auth/register", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ username: $("auth_user").value, email: $("auth_user").value + "@demo.com", password: $("auth_pass").value }) });
-    TOKEN = r.access_token;
-    localStorage.setItem("aev_token", TOKEN);
-    $("authStatus").textContent = "✅ 已註冊並登入：" + $("auth_user").value;
-    loadPortfolio();
-  } catch (e) { $("authStatus").textContent = "❌ " + e.message; }
+    const r = await api("/auth/register", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username:$("auth_user").value, email:$("auth_user").value+"@demo.com", password:$("auth_pass").value})});
+    state.token = r.access_token; localStorage.setItem("aev_token", state.token);
+    $("authStatus").textContent = "已註冊"; toast("註冊成功");
+    if (state.view === "portfolio") viewPortfolio();
+  } catch (e) { toast("註冊失敗：" + e.message); }
 }
-
-async function addPosition(e) {
-  e.preventDefault();
-  if (!TOKEN) { $("pf").innerHTML = '<span class="error">請先登入</span>'; return; }
+async function addPosition() {
+  if (!state.token) return toast("請先登入");
   try {
-    await api("/portfolio/positions", { method: "POST", headers: {...authHeaders(), "Content-Type":"application/json"}, body: JSON.stringify({ company_id: $("pf_cid").value, shares: parseFloat($("pf_shares").value), cost_basis: parseFloat($("pf_cost").value), current_price: $("pf_price").value ? parseFloat($("pf_price").value) : null }) });
-    loadPortfolio();
-  } catch (e) { $("pf").innerHTML = `<span class="error">${e.message}</span>`; }
+    await api("/portfolio/positions", {method:"POST", headers:{...authH(), "Content-Type":"application/json"}, body: JSON.stringify({
+      company_id:$("pf_cid").value.trim(), shares:parseFloat($("pf_shares").value), cost_basis:parseFloat($("pf_cost").value),
+      current_price: $("pf_price").value ? parseFloat($("pf_price").value) : null,
+    })});
+    toast("部位已儲存"); viewPortfolio();
+  } catch (e) { toast(e.message); }
 }
-
-async function loadPortfolio() {
-  if (!TOKEN) return;
-  try {
-    const r = await api("/portfolio/summary", { headers: authHeaders() });
-    const d = r.data || {};
-    $("pf").innerHTML = `
-      <div style="font-size:18px;font-weight:700">總市值 <span style="color:var(--good)">${fmt(d.total_value)}</span>｜總損益
-        <span style="color:${(d.total_pnl ?? 0) >= 0 ? "var(--good)" : "var(--bad)"}">${fmt(d.total_pnl)}（${fmt(d.total_pnl_pct)}%）</span></div>
-      <table style="margin-top:8px">
-        <tr><th>公司</th><th>股數</th><th>成本</th><th>現價</th><th>市值</th><th>損益%</th><th>ROE</th><th>PE</th><th></th></tr>
-        ${(d.positions || []).map(p => `<tr>
-          <td>${p.company_id} ${p.company_name || ""}</td><td>${fmt(p.shares)}</td><td>${fmt(p.cost_basis)}</td><td>${p.current_price ?? "—"}</td>
-          <td>${fmt(p.market_value)}</td><td style="color:${p.pnl >= 0 ? "var(--good)" : "var(--bad)"}">${fmt(p.pnl_pct)}%</td>
-          <td>${p.roe != null ? (p.roe*100).toFixed(1)+"%" : "—"}</td><td>${p.pe_ratio ?? "—"}</td>
-          <td><a href="#" style="color:var(--bad)" onclick="delPosition('${p.company_id}')">刪除</a></td></tr>`).join("")}
-      </table>`;
-  } catch (e) { $("pf").innerHTML = `<span class="error">${e.message}</span>`; }
-}
-
 async function delPosition(cid) {
+  try { await api(`/portfolio/positions/${cid}`, {method:"DELETE", headers:authH()}); viewPortfolio(); }
+  catch (e) { toast(e.message); }
+}
+async function viewPortfolio() {
+  if (!state.token) { $("pfResult").innerHTML = '<span class="faint">請先在右上角登入或註冊</span>'; return; }
+  $("pfAuthNote").textContent = "已登入";
   try {
-    await api(`/portfolio/positions/${cid}`, { method: "DELETE", headers: authHeaders() });
-    loadPortfolio();
-  } catch (e) { $("pf").innerHTML = `<span class="error">${e.message}</span>`; }
+    const r = await api("/portfolio/summary", {headers:authH()});
+    const d = r.data||{};
+    $("pfResult").innerHTML = `
+      <div style="display:flex; gap:28px; margin-bottom:12px; flex-wrap:wrap">
+        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">總市值</div><div class="big-num" style="color:var(--accent)">${fmt(d.total_value)}</div></div>
+        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">總成本</div><div class="big-num">${fmt(d.total_cost)}</div></div>
+        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">總損益</div><div class="big-num ${(d.total_pnl??0)>=0?'pos':'neg'}">${fmt(d.total_pnl)}</div></div>
+        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">報酬率</div><div class="big-num ${(d.total_pnl_pct??0)>=0?'pos':'neg'}">${fmt(d.total_pnl_pct)}%</div></div>
+      </div>
+      <table class="t">
+        <tr><th>公司</th><th>股數</th><th>成本</th><th>現價</th><th>市值</th><th>損益%</th><th>ROE</th><th>PE</th><th></th></tr>
+        ${(d.positions||[]).map(p=>`<tr>
+          <td>${p.company_id} <span class="muted">${p.company_name||""}</span></td>
+          <td>${fmt(p.shares)}</td><td>${fmt(p.cost_basis)}</td><td>${p.current_price ?? "—"}</td>
+          <td>${fmt(p.market_value)}</td>
+          <td class="${p.pnl>=0?'pos':'neg'}">${fmt(p.pnl_pct)}%</td>
+          <td>${p.roe!=null?(p.roe*100).toFixed(1)+"%":"—"}</td><td>${p.pe_ratio ?? "—"}</td>
+          <td><a href="#" class="neg" style="text-decoration:none" onclick="event.preventDefault();delPosition('${p.company_id}')">刪除</a></td>
+        </tr>`).join("") || '<tr><td colspan="9" class="faint">尚無部位</td></tr>'}
+      </table>`;
+  } catch (e) { $("pfResult").innerHTML = `<span class="neg">${e.message}</span>`; }
 }
 
+/* ---------------- Boot ---------------- */
 window.addEventListener("DOMContentLoaded", () => {
-  initCharts(); $("q").value = "2330"; selectCompany("2330");
-  if (TOKEN) { $("authStatus").textContent = "✅ 已登入"; loadPortfolio(); }
+  initCharts(); initShell();
+  $("q").value = "2330";
+  selectCompany("2330", "台積電");
 });
-window.addEventListener("resize", () => { trendChart?.resize(); riskChart?.resize(); peerChart?.resize(); });
 </script>
 </body>
 </html>
