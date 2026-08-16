@@ -89,8 +89,8 @@ def main() -> int:
             print(f"      Altman Z-Score: {distress.get('z_score')} | {distress.get('risk_level')}")
 
         # 無資料公司應回 404
-        r = client.post("/api/v1/analysis/risk-assessment", json={"company_id": "2454"})
-        results.append(check("POST /analysis/risk-assessment (2454 無報表→404)", r, expect_status=404))
+        r = client.post("/api/v1/analysis/risk-assessment", json={"company_id": "1301"})
+        results.append(check("POST /analysis/risk-assessment (1301 無報表→404)", r, expect_status=404))
 
     print("=" * 60)
     passed = sum(results)
