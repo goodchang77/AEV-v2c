@@ -69,8 +69,22 @@ deploy/azure/deploy.sh <VM_IP> azureuser
 
 - **HTTPS**：加 Nginx + Let's Encrypt（或 Azure 前面掛 Application Gateway / Front Door）。
 - **監控**：需要時再啟用 `docker-compose.prod.yml` 裡的 Prometheus/Grafana。
-- **DB 備份**：定期 `pg_dump`，或改接 Azure Database for PostgreSQL 托管。
 - **首次種入 2330 範例財務資料**（選用）：
   ```bash
   docker compose -f docker-compose.azure.yml --env-file deploy/azure/.env.production exec financial-api python scripts/init_db.py
   ```
+
+## 資料庫每日備份（建議上線必做）
+
+```bash
+# VM 上手動跑一次
+cd ~/aev-v2c && bash deploy/azure/backup.sh
+
+# 排程：每天凌晨 2 點自動備份（保留 14 天）
+crontab -e
+# 加入這行：
+# 0 2 * * * cd ~/aev-v2c && bash deploy/azure/backup.sh >> ~/backups/backup.log 2>&1
+
+# 還原（例如災難復原時）
+bash deploy/azure/restore.sh ~/backups/aev_backup_20260816_020000.sql.gz
+```
