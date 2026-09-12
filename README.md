@@ -214,13 +214,11 @@ flake8 src/
 
 ## 📞 聯絡資訊
 
-- **專案負責人**: [姓名]
-- **Email**: [email@example.com]
-- **技術文檔**: [連結]
+- **專案負責人**: Good Chang
+- **Email**: goodchang77@gmail.com
+- **技術文檔**:
 
 ---
 
 *基於現代軟體工程最佳實務與 IFRS 13 準則開發*# AEV-v2c
-# AEV-v2c
-# AEV-v2c
 # AEV-v2c
