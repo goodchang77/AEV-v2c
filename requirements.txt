@@ -79,7 +79,7 @@ flower==2.0.1
 
 # API 文檔
 mkdocs==1.5.3
-mkdocs-material==9.4.8
+mkdocs-material==9.7.7
 
 # AI Agent + MCP Server 依賴
 anthropic>=0.18.0
