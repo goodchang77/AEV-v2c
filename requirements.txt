@@ -75,7 +75,7 @@ pytesseract==0.3.10
 
 # 排程任務
 celery==5.3.4
-flower==2.0.1
+flower==2.2.0
 
 # API 文檔
 mkdocs==1.6.1
