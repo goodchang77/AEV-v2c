@@ -39,12 +39,14 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/financial_analysis
       REDIS_URL: redis://localhost:6379
-      SECRET_KEY: ci_secret_key_0123456789abcdef0123456789abcdef
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 (v4)
         with:
           persist-credentials: false
+
+      - name: Generate ephemeral test signing key
+        run: echo "SECRET_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0 (v5)
         with:
