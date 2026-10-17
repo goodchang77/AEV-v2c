@@ -368,6 +368,13 @@ const VIEW_NAMES = {overview:"總覽", financials:"財務", valuation:"估值", 
 const state = { company: null, view: "overview", token: localStorage.getItem("aev_token") || "" };
 const charts = {};
 
+// 所有插入 innerHTML 的非固定字串（API 回應、公司名稱、錯誤訊息）都必須經過 esc()
+function esc(v) {
+  return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function errHtml(e) { return `<span class="neg">${esc(e && e.message)}</span>`; }
+
 function toast(msg, ms=2600) {
   const t = $("toast"); t.textContent = msg; t.style.display = "block";
   clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms);
@@ -433,12 +440,12 @@ async function selectCompany(id, name) {
   state.company = { id, name: name || id };
   $("q").value = id;
   try {
-    const r = await api(`/companies/${id}`);
+    const r = await api(`/companies/${encodeURIComponent(id)}`);
     const c = r.data || {};
     state.company.info = c;
-    $("entityTitle").innerHTML = `<span class="mono">${c.company_id}</span> ${c.company_name} <span class="meta">${c.industry_name || c.industry_code || "—"} · ${c.market_type || "—"} · 上市日 ${c.listing_date || "—"}</span>`;
+    $("entityTitle").innerHTML = `<span class="mono">${esc(c.company_id)}</span> ${esc(c.company_name)} <span class="meta">${esc(c.industry_name || c.industry_code || "—")} · ${esc(c.market_type || "—")} · 上市日 ${esc(c.listing_date || "—")}</span>`;
   } catch (e) {
-    $("entityTitle").innerHTML = `<span class="mono">${id}</span> ${name || ""} <span class="meta">${e.message}</span>`;
+    $("entityTitle").innerHTML = `<span class="mono">${esc(id)}</span> ${esc(name || "")} <span class="meta">${esc(e.message)}</span>`;
   }
   setView(state.view);
 }
@@ -557,7 +564,7 @@ async function runDcf() {
         <b>上漲空間</b><span class="mono ${(d.upside_downside??0)>=0?'pos':'neg'}">${d.upside_downside!=null?fmt(d.upside_downside)+"%":"—"}</span>
         <b>終值占比</b><span class="mono">${d.terminal_value_percentage!=null?fmt(d.terminal_value_percentage)+"%":"—"}</span>
       </div>`;
-  } catch (e) { $("dcfResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+  } catch (e) { $("dcfResult").innerHTML = errHtml(e); }
 }
 async function runDdm() {
   const id = state.company?.id; if (!id) return toast("請先選擇公司");
@@ -568,8 +575,8 @@ async function runDdm() {
     })});
     const d = r.data||{};
     $("ddmResult").innerHTML = `<div class="big-num" style="color:var(--cyan)">${fmt(d.fair_value_per_share)} <span class="muted" style="font-size:13px">元 / 股</span></div>
-      <div class="faint" style="margin-top:6px">方法：${d.valuation_method} · 假設 股利成長 ${pct(d.assumptions?.dividend_growth_rate)}</div>`;
-  } catch (e) { $("ddmResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+      <div class="faint" style="margin-top:6px">方法：${esc(d.valuation_method)} · 假設 股利成長 ${esc(pct(d.assumptions?.dividend_growth_rate))}</div>`;
+  } catch (e) { $("ddmResult").innerHTML = errHtml(e); }
 }
 async function runPeg() {
   const id = state.company?.id; if (!id) return toast("請先選擇公司");
@@ -579,9 +586,9 @@ async function runPeg() {
     })});
     const d = r.data||{};
     const cls = d.rating==="低估"?"good":d.rating==="合理"?"info":"bad";
-    $("pegResult").innerHTML = `<div class="big-num" style="color:var(--amber)">${d.peg}</div>
-      <span class="badge ${cls}" style="margin-top:8px">${d.rating}</span>`;
-  } catch (e) { $("pegResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+    $("pegResult").innerHTML = `<div class="big-num" style="color:var(--amber)">${esc(d.peg)}</div>
+      <span class="badge ${cls}" style="margin-top:8px">${esc(d.rating)}</span>`;
+  } catch (e) { $("pegResult").innerHTML = errHtml(e); }
 }
 async function runMonteCarlo() {
   const id = state.company?.id; if (!id) return toast("請先選擇公司");
@@ -606,7 +613,7 @@ async function runMonteCarlo() {
       yAxis:baseAxis({type:"value", axisLabel:{color:"#8b98ab"}}),
       series:[{type:"bar", data:[p.p5,p.p25,p.p50,p.p75,p.p95].map(v=>({value:v, itemStyle:{color:"#4f9df7"}})), barMaxWidth:34, label:{show:true, position:"top", color:"#8b98ab", fontSize:10, formatter:v=>fmt(v.value,0)}}],
     });
-  } catch (e) { $("mcResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+  } catch (e) { $("mcResult").innerHTML = errHtml(e); }
 }
 
 /* ---------------- Peers ---------------- */
@@ -621,19 +628,19 @@ async function runPeer() {
     const es = d.executive_summary||{}, ratings = d.performance_overview?.ratings||{}, bm = d.industry_comparison?.key_benchmarks||{}, peers = d.peer_companies||[];
     $("peerResult").innerHTML = `
       <div style="display:flex; gap:24px; align-items:baseline; margin-bottom:12px">
-        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">COMPOSITE</div><div class="big-num" style="color:var(--green)">${es.composite_score ?? "—"}</div></div>
+        <div><div class="kpi-label" style="font-size:11px;color:var(--muted);letter-spacing:.08em">COMPOSITE</div><div class="big-num" style="color:var(--green)">${esc(es.composite_score ?? "—")}</div></div>
         <div class="kv">
-          ${Object.entries(ratings).map(([k,v])=>`<b>${k}</b><span>${v}</span>`).join("")}
-          <b>同業平均 ROE</b><span class="mono">${bm.avg_roe ?? "—"}%</span>
-          <b>同業平均負債比</b><span class="mono">${bm.avg_debt_ratio ?? "—"}%</span>
+          ${Object.entries(ratings).map(([k,v])=>`<b>${esc(k)}</b><span>${esc(v)}</span>`).join("")}
+          <b>同業平均 ROE</b><span class="mono">${esc(bm.avg_roe ?? "—")}%</span>
+          <b>同業平均負債比</b><span class="mono">${esc(bm.avg_debt_ratio ?? "—")}%</span>
         </div>
       </div>
       <table class="t"><tr><th>公司</th><th>ROE</th><th>ROA</th><th>流動比</th><th>負債比</th></tr>
-        ${peers.map(p=>`<tr><td>${p.company_id} <span class="muted">${p.company_name}</span></td><td>${p.key_ratios?.roe}%</td><td>${p.key_ratios?.roa}%</td><td>${p.key_ratios?.current_ratio}</td><td>${p.key_ratios?.debt_ratio}%</td></tr>`).join("")}
+        ${peers.map(p=>`<tr><td>${esc(p.company_id)} <span class="muted">${esc(p.company_name)}</span></td><td>${esc(p.key_ratios?.roe)}%</td><td>${esc(p.key_ratios?.roa)}%</td><td>${esc(p.key_ratios?.current_ratio)}</td><td>${esc(p.key_ratios?.debt_ratio)}%</td></tr>`).join("")}
       </table>
       <div class="two-col" style="margin-top:12px">
-        <div><div class="panel-title">STRENGTHS</div><ul class="tight">${(d.swot_analysis?.strengths||[]).map(s=>`<li><span class="pos">+</span> ${s}</li>`).join("")||"<li class='faint'>—</li>"}</ul></div>
-        <div><div class="panel-title">WEAKNESSES & ADVICE</div><ul class="tight">${(d.swot_analysis?.weaknesses||[]).map(s=>`<li><span class="neg">−</span> ${s}</li>`).join("")}${(d.swot_analysis?.recommendations||[]).map(s=>`<li><span class="muted">·</span> ${s}</li>`).join("")}</ul></div>
+        <div><div class="panel-title">STRENGTHS</div><ul class="tight">${(d.swot_analysis?.strengths||[]).map(s=>`<li><span class="pos">+</span> ${esc(s)}</li>`).join("")||"<li class='faint'>—</li>"}</ul></div>
+        <div><div class="panel-title">WEAKNESSES & ADVICE</div><ul class="tight">${(d.swot_analysis?.weaknesses||[]).map(s=>`<li><span class="neg">−</span> ${esc(s)}</li>`).join("")}${(d.swot_analysis?.recommendations||[]).map(s=>`<li><span class="muted">·</span> ${esc(s)}</li>`).join("")}</ul></div>
       </div>`;
     charts.peer.setOption({
       backgroundColor:"transparent",
@@ -647,7 +654,7 @@ async function runPeer() {
         {name:"ROA%", type:"bar", data:peers.map(p=>p.key_ratios?.roa), itemStyle:{color:"#34d399"}, barMaxWidth:22},
       ],
     });
-  } catch (e) { $("peerResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+  } catch (e) { $("peerResult").innerHTML = errHtml(e); }
 }
 
 /* ---------------- Risk ---------------- */
@@ -658,7 +665,7 @@ async function viewRisk() {
     const d = r.data||{}, b = d.risk_breakdown||{};
     const zd = b.financial_distress||{};
     $("rScore").textContent = fmt(d.overall_risk_score);
-    $("rLevel").innerHTML = `<span class="badge ${(d.risk_grade==="A"||d.risk_grade==="B")?"good":(d.risk_grade==="F"?"bad":"warn")}">${d.risk_grade} · ${d.risk_level}</span>`;
+    $("rLevel").innerHTML = `<span class="badge ${(d.risk_grade==="A"||d.risk_grade==="B")?"good":(d.risk_grade==="F"?"bad":"warn")}">${esc(d.risk_grade)} · ${esc(d.risk_level)}</span>`;
     $("rZ").textContent = fmt(zd.z_score);
     $("rZLevel").textContent = zd.risk_level || "—";
     $("rProb").textContent = zd.probability_of_bankruptcy!=null ? (zd.probability_of_bankruptcy*100).toFixed(1)+"%" : "—";
@@ -669,13 +676,13 @@ async function viewRisk() {
       ["槓桿", b.leverage?.score ?? 0, b.leverage?.leverage_rating || `負債比 ${fmt(b.leverage?.debt_to_asset_ratio)}%`],
     ];
     $("rDims").innerHTML = dims.map(([n,v,sub])=>`
-      <div class="scorebar-row"><span class="muted">${n}</span>
-        <div class="dimbar"><i style="width:${Math.min(100,v)}%;background:${barColor(v)}"></i></div>
+      <div class="scorebar-row"><span class="muted">${esc(n)}</span>
+        <div class="dimbar"><i style="width:${Math.min(100, Number(v) || 0)}%;background:${barColor(v)}"></i></div>
         <span class="mono">${fmt(v)}</span></div>
-      <div class="faint" style="margin:-6px 0 10px 120px; font-size:11px">${sub}</div>`).join("");
-    $("rConcerns").innerHTML = (d.key_concerns||[]).length ? `<ul class="tight">${d.key_concerns.map(c=>`<li><span class="neg">⚠</span> ${c}</li>`).join("")}</ul>` : "<span class='faint'>無重大風險</span>";
-    $("rRecs").innerHTML = (d.recommendations||[]).length ? `<ul class="tight">${d.recommendations.map(c=>`<li><span class="pos">→</span> ${c}</li>`).join("")}</ul>` : "<span class='faint'>—</span>";
-  } catch (e) { $("rConcerns").innerHTML = `<span class="neg">${e.message}</span>`; }
+      <div class="faint" style="margin:-6px 0 10px 120px; font-size:11px">${esc(sub)}</div>`).join("");
+    $("rConcerns").innerHTML = (d.key_concerns||[]).length ? `<ul class="tight">${d.key_concerns.map(c=>`<li><span class="neg">⚠</span> ${esc(c)}</li>`).join("")}</ul>` : "<span class='faint'>無重大風險</span>";
+    $("rRecs").innerHTML = (d.recommendations||[]).length ? `<ul class="tight">${d.recommendations.map(c=>`<li><span class="pos">→</span> ${esc(c)}</li>`).join("")}</ul>` : "<span class='faint'>—</span>";
+  } catch (e) { $("rConcerns").innerHTML = errHtml(e); }
 }
 
 /* ---------------- Reports ---------------- */
@@ -693,7 +700,7 @@ async function runReport() {
     const d = r.data||{};
     if (format === "pdf") { downloadB64(d.content_base64, d.filename); $("reportStatus").textContent = `✅ 已下載 ${d.filename}`; }
     else { $("reportPreview").value = d.content; $("reportStatus").textContent = "✅ Markdown 已產生（見預覽）"; }
-  } catch (e) { $("reportStatus").innerHTML = `<span class="neg">${e.message}</span>`; }
+  } catch (e) { $("reportStatus").innerHTML = errHtml(e); }
 }
 async function runExcel() {
   const id = state.company?.id; if (!id) return toast("請先選擇公司");
@@ -701,7 +708,7 @@ async function runExcel() {
     const r = await api("/reports/export-excel", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({company_id:id})});
     downloadB64(r.data.content_base64, r.data.filename);
     $("reportStatus").textContent = `✅ 已下載 ${r.data.filename}`;
-  } catch (e) { $("reportStatus").innerHTML = `<span class="neg">${e.message}</span>`; }
+  } catch (e) { $("reportStatus").innerHTML = errHtml(e); }
 }
 
 /* ---------------- Auth & Portfolio ---------------- */
@@ -732,7 +739,7 @@ async function addPosition() {
   } catch (e) { toast(e.message); }
 }
 async function delPosition(cid) {
-  try { await api(`/portfolio/positions/${cid}`, {method:"DELETE", headers:authH()}); viewPortfolio(); }
+  try { await api(`/portfolio/positions/${encodeURIComponent(cid)}`, {method:"DELETE", headers:authH()}); viewPortfolio(); }
   catch (e) { toast(e.message); }
 }
 async function viewPortfolio() {
@@ -751,15 +758,19 @@ async function viewPortfolio() {
       <table class="t">
         <tr><th>公司</th><th>股數</th><th>成本</th><th>現價</th><th>市值</th><th>損益%</th><th>ROE</th><th>PE</th><th></th></tr>
         ${(d.positions||[]).map(p=>`<tr>
-          <td>${p.company_id} <span class="muted">${p.company_name||""}</span></td>
-          <td>${fmt(p.shares)}</td><td>${fmt(p.cost_basis)}</td><td>${p.current_price ?? "—"}</td>
+          <td>${esc(p.company_id)} <span class="muted">${esc(p.company_name||"")}</span></td>
+          <td>${fmt(p.shares)}</td><td>${fmt(p.cost_basis)}</td><td>${esc(p.current_price ?? "—")}</td>
           <td>${fmt(p.market_value)}</td>
           <td class="${p.pnl>=0?'pos':'neg'}">${fmt(p.pnl_pct)}%</td>
-          <td>${p.roe!=null?(p.roe*100).toFixed(1)+"%":"—"}</td><td>${p.pe_ratio ?? "—"}</td>
-          <td><a href="#" class="neg" style="text-decoration:none" onclick="event.preventDefault();delPosition('${p.company_id}')">刪除</a></td>
+          <td>${p.roe!=null?(p.roe*100).toFixed(1)+"%":"—"}</td><td>${esc(p.pe_ratio ?? "—")}</td>
+          <td><a href="#" class="neg" style="text-decoration:none" data-del-position="${esc(p.company_id)}">刪除</a></td>
         </tr>`).join("") || '<tr><td colspan="9" class="faint">尚無部位</td></tr>'}
       </table>`;
-  } catch (e) { $("pfResult").innerHTML = `<span class="neg">${e.message}</span>`; }
+    // 以 data 屬性 + 事件綁定取代 inline onclick，避免公司代號被當成 JS 執行
+    $("pfResult").querySelectorAll("[data-del-position]").forEach(a => {
+      a.onclick = (ev) => { ev.preventDefault(); delPosition(a.dataset.delPosition); };
+    });
+  } catch (e) { $("pfResult").innerHTML = errHtml(e); }
 }
 
 /* ---------------- Boot ---------------- */
