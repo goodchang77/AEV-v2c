@@ -16,7 +16,7 @@ python-multipart>=0.0.32
 
 # Database optimization
 asyncpg>=0.29.0
-psycopg2-binary>=2.9.9
+psycopg2-binary>=2.9.13
 redis[hiredis]>=5.0.1
 sqlalchemy[asyncio]>=2.0.23
 
