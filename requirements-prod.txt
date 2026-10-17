@@ -17,7 +17,7 @@ python-multipart>=0.0.32
 # Database optimization
 asyncpg>=0.29.0
 psycopg2-binary>=2.9.9
-redis[hiredis]>=5.0.1
+redis[hiredis]>=8.1.0
 sqlalchemy[asyncio]>=2.0.23
 
 # HTTP client optimization  

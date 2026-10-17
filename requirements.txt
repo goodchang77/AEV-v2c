@@ -11,7 +11,7 @@ asyncpg==0.29.0  # PostgreSQL async driver
 psycopg2-binary==2.9.9  # PostgreSQL sync driver
 
 # Redis 快取
-redis==5.0.1
+redis==8.1.0
 aioredis==2.0.1
 
 # 認證與安全
