@@ -2,7 +2,7 @@
 認證 API 端點
 Authentication API Endpoints
 
-提供註冊、登入（JWT）、當前使用者查詢。使用 python-jose + passlib[bcrypt]。
+提供註冊、登入（JWT）、當前使用者查詢。使用 PyJWT + passlib[bcrypt]。
 """
 
 from datetime import datetime, timedelta
@@ -11,7 +11,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError as JWTError
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, EmailStr
 from sqlalchemy.orm import Session

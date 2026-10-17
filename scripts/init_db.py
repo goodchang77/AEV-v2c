@@ -320,7 +320,21 @@ def _insert_peer_samples(cur) -> None:
         print(f"    已插入 {cid} {d['name']} 樣本財務資料")
 
 
+def _refuse_demo_seed_in_production() -> bool:
+    """正式環境預設拒絕載入示範資料（含示範帳號）；需明確設定 AEV_ALLOW_DEMO_SEED=1。"""
+    import os
+    env = (os.getenv("ENVIRONMENT") or os.getenv("ENV") or "development").strip().lower()
+    allowed = os.getenv("AEV_ALLOW_DEMO_SEED", "").strip() == "1"
+    if env == "production" and not allowed:
+        print("❌ 正式環境禁止執行示範資料初始化（會建立示範帳號）。"
+              "請只套用 schema，並依部署文件安全建立管理員。")
+        return True
+    return False
+
+
 def main() -> int:
+    if _refuse_demo_seed_in_production():
+        return 2
     settings = get_settings()
     print(f"連線目標: {settings.DATABASE_URL.split('@')[-1]}")
 

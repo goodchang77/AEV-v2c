@@ -486,7 +486,7 @@ async def get_supported_formats():
         "processing_methods": [
             "pdfplumber - 優化表格提取",
             "PyMuPDF - 高效文字提取",
-            "PyPDF2 - 備用解析方法"
+            "pypdf - 備用解析方法"
         ]
     }
 

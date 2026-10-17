@@ -291,7 +291,7 @@ class TestFinancialPDFProcessor:
     @pytest.mark.asyncio
     @patch('src.services.pdf_processor.pdfplumber')
     @patch('src.services.pdf_processor.fitz')  
-    @patch('src.services.pdf_processor.PyPDF2')
+    @patch('src.services.pdf_processor.pypdf')
     async def test_process_pdf_success(self, mock_pypdf2, mock_fitz, mock_pdfplumber, processor, sample_pdf_content):
         """測試PDF處理成功案例"""
         # 模擬 pdfplumber 成功提取

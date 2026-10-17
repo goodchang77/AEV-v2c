@@ -13,7 +13,7 @@ from decimal import Decimal
 from pathlib import Path
 import fitz  # PyMuPDF
 import pdfplumber
-import PyPDF2
+import pypdf
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class FinancialPDFProcessor:
             except Exception as e:
                 logger.warning(f"PyMuPDF extraction failed for {filename}: {e}")
             
-            # 方法3: 使用 PyPDF2（備用）
+            # 方法3: 使用 pypdf（備用；方法鍵名沿用 pypdf2 以維持相容）
             try:
                 pypdf2_data = await self._extract_with_pypdf2(pdf_content)
                 if pypdf2_data:
@@ -245,7 +245,7 @@ class FinancialPDFProcessor:
         """使用 PyPDF2 提取數據（備用方法）"""
         financial_data = {}
         
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
+        pdf_reader = pypdf.PdfReader(io.BytesIO(pdf_content))
         text_content = ""
         
         for page_num, page in enumerate(pdf_reader.pages, 1):
@@ -547,7 +547,7 @@ class FinancialPDFProcessor:
     def _get_page_count(self, pdf_content: bytes) -> int:
         """獲取PDF頁數"""
         try:
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
+            pdf_reader = pypdf.PdfReader(io.BytesIO(pdf_content))
             return len(pdf_reader.pages)
         except:
             return 0

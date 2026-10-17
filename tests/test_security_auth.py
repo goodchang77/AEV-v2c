@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from jose import jwt
+import jwt
 
 from src.api.endpoints import auth as auth_module
 from src.api.endpoints.auth import create_access_token, get_current_user

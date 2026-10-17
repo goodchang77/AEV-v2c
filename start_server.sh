@@ -57,4 +57,4 @@ echo -e "${YELLOW}按 CTRL+C 停止伺服器${NC}"
 echo ""
 
 # 啟動伺服器
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
