@@ -4,10 +4,34 @@ Configuration Management
 """
 
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 import os
+
+
+# 已提交到版本庫（程式碼 / CI / compose 範本）的金鑰值：正式環境一律拒絕使用
+_DEV_DEFAULT_SECRET_KEY = "dev_secret_key_2024_financial_analysis_system"
+KNOWN_INSECURE_SECRET_KEYS = frozenset({
+    _DEV_DEFAULT_SECRET_KEY,
+    "test_secret_key_for_testing_only",
+    "ci_secret_key_0123456789abcdef0123456789abcdef",
+    "local_dev_secret_key_2024_very_secure",
+})
+# 看起來像範本佔位字串的關鍵字（不分大小寫）
+_PLACEHOLDER_MARKERS = ("change", "example", "your")
+MIN_PRODUCTION_SECRET_KEY_LENGTH = 32
+# 正式環境永遠允許的主機（容器內 health check 使用）
+_ALWAYS_ALLOWED_HOSTS = ("localhost", "127.0.0.1")
+
+
+def resolve_environment() -> str:
+    """讀取執行環境：優先 ENVIRONMENT，相容舊版部署範本使用的 ENV。"""
+    value = os.getenv("ENVIRONMENT") or os.getenv("ENV") or "development"
+    value = value.strip().lower()
+    if value == "prod":
+        value = "production"
+    return value
 
 
 class Settings(BaseSettings):
@@ -31,19 +55,21 @@ class Settings(BaseSettings):
     REDIS_DECODE_RESPONSES: bool = True
     
     # 安全性設定
-    SECRET_KEY: str = "dev_secret_key_2024_financial_analysis_system"
+    SECRET_KEY: str = _DEV_DEFAULT_SECRET_KEY
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ALGORITHM: str = "HS256"
     
     # CORS 設定
-    ALLOWED_ORIGINS: List[str] = [
+    # 允許逗號分隔字串（環境變數）或 JSON list；Union[..., str] 讓 pydantic-settings
+    # 在非 JSON 時把原始字串交給下方 validator 切分
+    ALLOWED_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://localhost:8000",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8000"
     ]
-    ALLOWED_HOSTS: Optional[List[str]] = None
+    ALLOWED_HOSTS: Optional[Union[List[str], str]] = None
     
     # 外部 API 設定
     TWSE_API_KEY: Optional[str] = None
@@ -100,7 +126,7 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v):
         """處理 CORS origins 設定"""
         if isinstance(v, str):
-            return [i.strip() for i in v.split(",")]
+            return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
         raise ValueError("ALLOWED_ORIGINS must be a comma-separated string or list")
@@ -112,7 +138,7 @@ class Settings(BaseSettings):
         if v is None:
             return None
         if isinstance(v, str):
-            return [i.strip() for i in v.split(",")]
+            return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
         raise ValueError("ALLOWED_HOSTS must be a comma-separated string or list")
@@ -172,14 +198,54 @@ class DevelopmentSettings(Settings):
     LOG_LEVEL: str = "DEBUG"
 
 
+def is_insecure_secret_key(value: Optional[str]) -> bool:
+    """金鑰是否不適合正式環境（未設定、過短、已提交的預設值或範本佔位字）"""
+    if not value or len(value) < MIN_PRODUCTION_SECRET_KEY_LENGTH:
+        return True
+    if value in KNOWN_INSECURE_SECRET_KEYS:
+        return True
+    lowered = value.lower()
+    return any(marker in lowered for marker in _PLACEHOLDER_MARKERS)
+
+
 class ProductionSettings(Settings):
-    """生產環境設定"""
+    """生產環境設定（fail-closed：設定不安全時拒絕啟動）"""
     DEBUG: bool = False
     LOG_LEVEL: str = "WARNING"
-    
-    # 生產環境安全設定
-    ALLOWED_HOSTS: List[str] = ["api.financial-analysis.com"]
-    ALLOWED_ORIGINS: List[str] = ["https://financial-analysis.com"]
+
+    # 生產環境安全設定：必須由環境變數（逗號分隔）提供，不再內建網域
+    ALLOWED_HOSTS: Optional[Union[List[str], str]] = None
+    ALLOWED_ORIGINS: Union[List[str], str] = []
+
+    @model_validator(mode="after")
+    def enforce_production_safety(self):
+        # 正式環境永遠關閉 DEBUG（即使環境變數設定 DEBUG=true）
+        self.DEBUG = False
+
+        if is_insecure_secret_key(self.SECRET_KEY):
+            raise ValueError(
+                "Production requires SECRET_KEY to be set to a strong random value "
+                f"(>= {MIN_PRODUCTION_SECRET_KEY_LENGTH} chars, not a committed default "
+                "or placeholder). Generate one with: openssl rand -hex 32"
+            )
+
+        hosts = [h for h in (self.ALLOWED_HOSTS or []) if h]
+        if not hosts:
+            raise ValueError(
+                "Production requires ALLOWED_HOSTS (comma-separated) to be set"
+            )
+        if "*" in hosts:
+            raise ValueError("Production ALLOWED_HOSTS must not contain '*'")
+        for host in _ALWAYS_ALLOWED_HOSTS:
+            if host not in hosts:
+                hosts.append(host)
+        self.ALLOWED_HOSTS = hosts
+
+        origins = [o for o in (self.ALLOWED_ORIGINS or []) if o]
+        if "*" in origins:
+            raise ValueError("Production ALLOWED_ORIGINS must not contain '*'")
+        self.ALLOWED_ORIGINS = origins
+        return self
 
 
 class TestingSettings(Settings):
@@ -194,7 +260,7 @@ class TestingSettings(Settings):
 @lru_cache()
 def get_settings() -> Settings:
     """取得應用程式設定單例"""
-    environment = os.getenv("ENVIRONMENT", "development").lower()
+    environment = resolve_environment()
     
     if environment == "production":
         return ProductionSettings()
