@@ -17,6 +17,9 @@ import PyPDF2
 
 logger = logging.getLogger(__name__)
 
+# 解析頁數上限：避免惡意或超大 PDF 耗盡 CPU / 記憶體
+MAX_PDF_PAGES = 200
+
 
 class FinancialPDFProcessor:
     """財務報表PDF處理器"""
@@ -125,6 +128,10 @@ class FinancialPDFProcessor:
             Dict: 提取的財務數據和元信息
         """
         try:
+            page_count = self._get_page_count(pdf_content)
+            if page_count > MAX_PDF_PAGES:
+                raise ValueError(f"PDF 頁數超過上限（最多 {MAX_PDF_PAGES} 頁）")
+
             # 嘗試不同的PDF解析方法
             extracted_data = {}
             
@@ -168,7 +175,7 @@ class FinancialPDFProcessor:
                 'financial_data': merged_data,
                 'extraction_methods': list(extracted_data.keys()),
                 'metadata': {
-                    'total_pages': self._get_page_count(pdf_content),
+                    'total_pages': page_count,
                     'file_size': len(pdf_content)
                 }
             }
@@ -193,6 +200,8 @@ class FinancialPDFProcessor:
             tables = []
             
             for page_num, page in enumerate(pdf.pages, 1):
+                if page_num > MAX_PDF_PAGES:
+                    break
                 # 提取文字
                 page_text = page.extract_text() or ""
                 text_content += f"\\n--- Page {page_num} ---\\n{page_text}"
@@ -219,7 +228,7 @@ class FinancialPDFProcessor:
         doc = fitz.open(stream=pdf_content, filetype="pdf")
         text_content = ""
         
-        for page_num in range(doc.page_count):
+        for page_num in range(min(doc.page_count, MAX_PDF_PAGES)):
             page = doc.load_page(page_num)
             page_text = page.get_text()
             text_content += f"\\n--- Page {page_num + 1} ---\\n{page_text}"
@@ -240,6 +249,8 @@ class FinancialPDFProcessor:
         text_content = ""
         
         for page_num, page in enumerate(pdf_reader.pages, 1):
+            if page_num > MAX_PDF_PAGES:
+                break
             page_text = page.extract_text()
             text_content += f"\\n--- Page {page_num} ---\\n{page_text}"
         
