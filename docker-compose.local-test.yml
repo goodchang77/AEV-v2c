@@ -1,3 +1,9 @@
+# ============================================================================
+# ⚠️ LOCAL DEVELOPMENT ONLY — 僅供本機開發 / 測試使用，切勿用於任何對外或生產環境。
+#    本檔內的帳號密碼（dev_password_2024、admin123 等）為公開的開發用預設值。
+#    所有 port 只綁 127.0.0.1，不對區網 / 網際網路開放。
+#    生產部署請用 docker-compose.azure.yml 或 docker-compose.prod.yml。
+# ============================================================================
 version: '3.8'
 
 services:
@@ -29,7 +35,7 @@ services:
       ENVIRONMENT: local
       TESTING: false
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,7 +65,7 @@ services:
       POSTGRES_PASSWORD: dev_password_2024
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
@@ -78,7 +84,7 @@ services:
     image: redis:7-alpine
     container_name: financial_redis_local
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
@@ -101,7 +107,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: dev_password_2024
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./database/timescale_init:/docker-entrypoint-initdb.d
@@ -123,7 +129,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./config/pgadmin_servers.json:/pgadmin4/servers.json
@@ -141,7 +147,7 @@ services:
     image: redislabs/redisinsight:latest
     container_name: financial_redis_insight
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     volumes:
       - redis_insight_data:/db
     networks:
@@ -156,7 +162,7 @@ services:
     image: adminer:4.8.1
     container_name: financial_adminer
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       ADMINER_DEFAULT_SERVER: postgres
     networks:
