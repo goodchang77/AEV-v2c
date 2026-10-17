@@ -3,7 +3,7 @@
 驗證密碼雜湊與 JWT 產出/解析邏輯。
 """
 
-from jose import jwt
+import jwt
 
 from src.core.config import get_settings
 from src.api.endpoints.auth import (

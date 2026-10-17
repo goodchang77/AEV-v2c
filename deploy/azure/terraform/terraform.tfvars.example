@@ -8,5 +8,15 @@ vm_size           = "Standard_D2s_v3"  # 2 vCPU / 8GB RAM；更省可試 Standar
 admin_username    = "azureuser"
 ssh_public_key_path = "~/.ssh/id_rsa.pub"
 
-# 建議改成你自己的對外 IP（例如 "123.45.67.89/32"），不要全開 SSH
-ssh_source_cidr   = "0.0.0.0/0"
+# 必填：SSH 來源必須是你自己的對外 IP（查詢：curl -4 https://ifconfig.me），
+# 0.0.0.0/0 / * 會被 variables.tf 的 validation 拒絕。
+ssh_source_cidr   = "203.0.113.10/32" # ← CHANGE_ME（203.0.113.0/24 為文件保留範例網段）
+
+# 必填：允許連入 443（VM 上的 TLS 反向代理）的來源。
+#   []                 → 不開 443，只用 SSH tunnel 存取（最保守）
+#   ["203.0.113.0/24"] → 限定來源
+#   ["0.0.0.0/0"]      → 對全網公開 TLS 站台（請確認反向代理與應用登入保護已就緒）
+https_source_cidrs = []
+
+# 選用：只在需要 HTTP→HTTPS 轉址或 Let's Encrypt HTTP-01 時開 80（預設不開）
+# http_source_cidrs = ["0.0.0.0/0"]

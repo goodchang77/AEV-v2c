@@ -267,6 +267,43 @@
         let currentDocumentId = null;
         let statusCheckInterval = null;
 
+        // 所有插入 innerHTML 的非固定字串都必須經過 escapeHtml
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // 上傳端點需要登入：沿用主頁 (index.html) 儲存在 localStorage 的 token
+        function authHeaders() {
+            const token = localStorage.getItem('aev_token');
+            return token ? { 'Authorization': 'Bearer ' + token } : {};
+        }
+
+        function errorText(response, body) {
+            if (response.status === 401) {
+                return '尚未登入或登入已過期，請先在主頁右上角登入後再試';
+            }
+            if (response.status === 403) {
+                return '帳戶無權限或已停用';
+            }
+            const detail = body && body.detail;
+            if (typeof detail === 'string') return detail;
+            if (detail && typeof detail.message === 'string') return detail.message;
+            return `HTTP ${response.status}`;
+        }
+
+        async function readJson(response) {
+            try {
+                return await response.json();
+            } catch (_) {
+                return null;
+            }
+        }
+
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await uploadFile(false);
@@ -317,13 +354,14 @@
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, {
                     method: 'POST',
+                    headers: authHeaders(),
                     body: formData
                 });
 
-                const result = await response.json();
+                const result = await readJson(response);
 
-                if (!response.ok) {
-                    throw new Error(result.detail || `HTTP ${response.status}`);
+                if (!response.ok || !result) {
+                    throw new Error(errorText(response, result));
                 }
 
                 if (isTest) {
@@ -377,11 +415,14 @@
 
         async function checkStatus(documentId) {
             try {
-                const response = await fetch(`${API_BASE}/processing-status/${documentId}`);
-                const status = await response.json();
+                const response = await fetch(
+                    `${API_BASE}/processing-status/${encodeURIComponent(documentId)}`,
+                    { headers: authHeaders() }
+                );
+                const status = await readJson(response);
 
-                if (!response.ok) {
-                    throw new Error(status.detail || `HTTP ${response.status}`);
+                if (!response.ok || !status) {
+                    throw new Error(errorText(response, status));
                 }
 
                 showProgress(status.progress, status.message || '處理中...');
@@ -412,23 +453,23 @@
                     <h3>📋 測試提取結果</h3>
                     <div class="metric">
                         <span class="metric-name">檔案名稱：</span>
-                        <span class="metric-value">${preview.filename}</span>
+                        <span class="metric-value">${escapeHtml(preview.filename)}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-name">檔案大小：</span>
-                        <span class="metric-value">${formatFileSize(preview.file_size)}</span>
+                        <span class="metric-value">${escapeHtml(formatFileSize(preview.file_size))}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-name">處理狀態：</span>
-                        <span class="metric-value">${preview.status}</span>
+                        <span class="metric-value">${escapeHtml(preview.status)}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-name">找到的財務指標：</span>
-                        <span class="metric-value">${preview.financial_metrics_found} 個</span>
+                        <span class="metric-value">${escapeHtml(preview.financial_metrics_found)} 個</span>
                     </div>
                     <div class="metric">
                         <span class="metric-name">提取方法：</span>
-                        <span class="metric-value">${preview.extraction_methods.join(', ')}</span>
+                        <span class="metric-value">${escapeHtml((preview.extraction_methods || []).join(', '))}</span>
                     </div>
                     ${preview.sample_data ? displaySampleData(preview.sample_data) : ''}
                 </div>
@@ -468,8 +509,8 @@
             for (const [key, data] of Object.entries(sampleData)) {
                 html += `
                     <div class="metric">
-                        <span class="metric-name">${translateMetricName(key)}：</span>
-                        <span class="metric-value">${formatNumber(data.value)} ${getUnitName(data.unit_multiplier)}</span>
+                        <span class="metric-name">${escapeHtml(translateMetricName(key))}：</span>
+                        <span class="metric-value">${escapeHtml(formatNumber(data.value))} ${escapeHtml(getUnitName(data.unit_multiplier))}</span>
                     </div>
                 `;
             }
@@ -487,10 +528,10 @@
             for (const [key, data] of Object.entries(financialData)) {
                 html += `
                     <div class="metric">
-                        <span class="metric-name">${translateMetricName(key)}：</span>
+                        <span class="metric-name">${escapeHtml(translateMetricName(key))}：</span>
                         <span class="metric-value">
-                            ${formatNumber(data.value)} ${getUnitName(data.unit_multiplier)}
-                            <small style="color: #6c757d;">(${data.extraction_method}, 置信度: ${(data.confidence * 100).toFixed(1)}%)</small>
+                            ${escapeHtml(formatNumber(data.value))} ${escapeHtml(getUnitName(data.unit_multiplier))}
+                            <small style="color: #6c757d;">(${escapeHtml(data.extraction_method)}, 置信度: ${escapeHtml((Number(data.confidence) * 100).toFixed(1))}%)</small>
                         </span>
                     </div>
                 `;
@@ -508,21 +549,21 @@
             if (validation.warnings && validation.warnings.length > 0) {
                 html += '<h4>⚠️ 警告：</h4>';
                 validation.warnings.forEach(warning => {
-                    html += `<div class="warning">${warning}</div>`;
+                    html += `<div class="warning">${escapeHtml(warning)}</div>`;
                 });
             }
             
             if (validation.errors && validation.errors.length > 0) {
                 html += '<h4>❌ 錯誤：</h4>';
                 validation.errors.forEach(error => {
-                    html += `<div class="error-msg">${error}</div>`;
+                    html += `<div class="error-msg">${escapeHtml(error)}</div>`;
                 });
             }
             
             if (validation.suggestions && validation.suggestions.length > 0) {
                 html += '<h4>💡 建議：</h4>';
                 validation.suggestions.forEach(suggestion => {
-                    html += `<div class="warning">${suggestion}</div>`;
+                    html += `<div class="warning">${escapeHtml(suggestion)}</div>`;
                 });
             }
             
@@ -534,19 +575,19 @@
             let html = '<div class="financial-data"><h3>📄 文件信息</h3>';
             
             if (metadata.filename) {
-                html += `<div class="metric"><span class="metric-name">檔案名稱：</span><span class="metric-value">${metadata.filename}</span></div>`;
+                html += `<div class="metric"><span class="metric-name">檔案名稱：</span><span class="metric-value">${escapeHtml(metadata.filename)}</span></div>`;
             }
             
             if (metadata.file_size) {
-                html += `<div class="metric"><span class="metric-name">檔案大小：</span><span class="metric-value">${formatFileSize(metadata.file_size)}</span></div>`;
+                html += `<div class="metric"><span class="metric-name">檔案大小：</span><span class="metric-value">${escapeHtml(formatFileSize(metadata.file_size))}</span></div>`;
             }
             
             if (metadata.total_pages) {
-                html += `<div class="metric"><span class="metric-name">總頁數：</span><span class="metric-value">${metadata.total_pages}</span></div>`;
+                html += `<div class="metric"><span class="metric-name">總頁數：</span><span class="metric-value">${escapeHtml(metadata.total_pages)}</span></div>`;
             }
             
             if (metadata.extraction_methods) {
-                html += `<div class="metric"><span class="metric-name">提取方法：</span><span class="metric-value">${metadata.extraction_methods.join(', ')}</span></div>`;
+                html += `<div class="metric"><span class="metric-name">提取方法：</span><span class="metric-value">${escapeHtml((metadata.extraction_methods || []).join(', '))}</span></div>`;
             }
             
             html += '</div>';
@@ -555,7 +596,10 @@
 
         function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('statusMessage');
-            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            const box = document.createElement('div');
+            box.className = 'status ' + (['info', 'success', 'error'].includes(type) ? type : 'info');
+            box.textContent = String(message ?? '');
+            statusDiv.replaceChildren(box);
         }
 
         function showLoading(show) {

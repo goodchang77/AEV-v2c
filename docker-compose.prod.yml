@@ -1,5 +1,17 @@
 # Production Docker Compose Configuration
 # 生產環境 Docker Compose 配置
+#
+# 安全設計：
+#   - 只有 nginx（TLS 反向代理）對外發布 80/443；API、Prometheus、Grafana 僅綁 127.0.0.1，
+#     PostgreSQL / TimescaleDB / Redis 完全不發布 host port（只在 compose 內部網路可連）。
+#   - 必填環境變數（缺少時 compose 直接報錯，不使用弱預設值）：
+#       SECRET_KEY, ALLOWED_HOSTS, ALLOWED_ORIGINS, POSTGRES_PASSWORD, REDIS_PASSWORD,
+#       GRAFANA_ADMIN_PASSWORD
+#     產生方式：openssl rand -hex 32
+#
+# ⚠️ 注意：本檔引用的 ./nginx/nginx.conf、./nginx/ssl、./monitoring/prometheus.yml、
+#    ./monitoring/grafana、./monitoring/filebeat.yml 目前在 repo 中「尚不存在」，
+#    上線前必須先自行建立（否則 nginx / prometheus / grafana / filebeat 無法正常啟動）。
 version: '3.8'
 
 services:
@@ -12,15 +24,21 @@ services:
     image: financial-analysis:${VERSION:-latest}
     container_name: financial-api-prod
     restart: unless-stopped
+    # 只綁本機；對外流量一律經由 nginx（TLS）
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=redis://redis:6379
-      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
-      - SECRET_KEY=${SECRET_KEY}
-      - SENTRY_DSN=${SENTRY_DSN}
+      # ENVIRONMENT 選擇設定類別；production 強制 DEBUG=false 並驗證 SECRET_KEY
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-financial_analysis}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required (openssl rand -hex 32)}
+      # 逗號分隔清單；localhost/127.0.0.1 由應用程式自動允許（容器健康檢查用）
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required (comma-separated hostnames)}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required (comma-separated https origins)}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     volumes:
       - app_logs:/app/logs
       - app_uploads:/app/uploads
@@ -37,7 +55,7 @@ services:
       retries: 3
       start_period: 60s
 
-  # PostgreSQL 主資料庫
+  # PostgreSQL 主資料庫（不發布 host port）
   postgres:
     image: postgres:15-alpine
     container_name: financial-postgres-prod
@@ -45,12 +63,14 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-financial_analysis}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
+      # 只載入結構 SQL；刻意不載入 02_sample_data.sql（含示範帳號與固定密碼雜湊）。
+      # （原本掛載的 ./scripts/init-db.sql 並不存在於 repo。）
+      - ./database/init/01_create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql:ro
+      - ./database/init/03_valuation_and_stock.sql:/docker-entrypoint-initdb.d/03_valuation_and_stock.sql:ro
+      - ./database/init/04_portfolio.sql:/docker-entrypoint-initdb.d/04_portfolio.sql:ro
     networks:
       - financial-network
     healthcheck:
@@ -59,7 +79,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # TimescaleDB 時序資料庫
+  # TimescaleDB 時序資料庫（不發布 host port）
   timescaledb:
     image: timescale/timescaledb:2.11.0-pg15
     container_name: financial-timescale-prod
@@ -67,33 +87,32 @@ services:
     environment:
       POSTGRES_DB: ${TIMESCALE_DB:-timeseries_financial}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - timescale_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
     networks:
       - financial-network
 
-  # Redis 快取服務
+  # Redis 快取服務（不發布 host port，需密碼）
   redis:
     image: redis:7-alpine
     container_name: financial-redis-prod
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     networks:
       - financial-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 3
 
-  # Nginx 負載均衡器
+  # Nginx TLS 反向代理（唯一對外服務）
+  # ⚠️ ./nginx/nginx.conf 與 ./nginx/ssl 尚未存在於 repo，需自行提供
   nginx:
     image: nginx:alpine
     container_name: financial-nginx-prod
@@ -102,62 +121,69 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - financial-api
     networks:
       - financial-network
 
-  # Prometheus 監控
+  # Prometheus 監控（僅本機；用 SSH tunnel 存取）
+  # 已移除 --web.enable-lifecycle：避免未驗證的 /-/reload、/-/quit 管理端點
+  # ⚠️ ./monitoring/prometheus.yml 尚未存在於 repo
   prometheus:
     image: prom/prometheus:latest
     container_name: financial-prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
     networks:
       - financial-network
 
-  # Grafana 可視化
+  # Grafana 可視化（僅本機；用 SSH tunnel 存取）
+  # ⚠️ ./monitoring/grafana 尚未存在於 repo
   grafana:
     image: grafana/grafana:latest
     container_name: financial-grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      # 無預設值：未設定 GRAFANA_ADMIN_PASSWORD 時 compose 直接報錯
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana:/etc/grafana/provisioning
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
     networks:
       - financial-network
 
   # 日誌收集
+  # 安全：刻意「不」掛載 /var/run/docker.sock —— 可存取 docker socket 等同取得 host root，
+  # filebeat 容器一旦被攻破即可接管整台主機。若需要 Docker metadata / 容器自動探索，
+  # 請改用 host 層級的日誌代理（journald、Azure Monitor Agent、或直接裝在 host 上的 filebeat）。
+  # ⚠️ ./monitoring/filebeat.yml 尚未存在於 repo
   filebeat:
     image: elastic/filebeat:8.11.0
     container_name: financial-filebeat
     restart: unless-stopped
     user: root
     volumes:
-      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - app_logs:/app/logs:ro
       - nginx_logs:/nginx/logs:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     command: filebeat -e -strict.perms=false
     networks:
       - financial-network

@@ -1,3 +1,9 @@
+# ============================================================================
+# ⚠️ LOCAL DEVELOPMENT ONLY — 僅供本機開發 / 測試使用，切勿用於任何對外或生產環境。
+#    本檔內的帳號密碼（dev_password_2024、admin123 等）為公開的開發用預設值。
+#    所有 port 只綁 127.0.0.1，不對區網 / 網際網路開放。
+#    生產部署請用 docker-compose.azure.yml 或 docker-compose.prod.yml。
+# ============================================================================
 version: '3.8'
 
 services:
@@ -11,7 +17,7 @@ services:
       POSTGRES_PASSWORD: dev_password_2024
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
@@ -29,7 +35,7 @@ services:
     image: redis:7-alpine
     container_name: financial_redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -51,7 +57,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: dev_password_2024
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./database/timescale_init:/docker-entrypoint-initdb.d
@@ -68,7 +74,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:

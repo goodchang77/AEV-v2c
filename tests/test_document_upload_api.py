@@ -5,21 +5,39 @@ Document Upload API Endpoints Tests
 
 import pytest
 import io
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
 
 from src.main import app
+from src.api.endpoints.auth import get_current_user
 from src.api.endpoints.document_upload import processing_results
+
+# 上傳相關端點需要登入：測試以 dependency override 模擬已登入使用者
+TEST_OWNER_ID = "00000000-0000-0000-0000-0000000000aa"
+
+
+def _fake_current_user():
+    return SimpleNamespace(user_id=TEST_OWNER_ID, is_active=True, role="user")
+
+
+@pytest.fixture
+def authed_client():
+    app.dependency_overrides[get_current_user] = _fake_current_user
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 class TestDocumentUploadAPI:
     """文件上傳API測試類"""
 
     @pytest.fixture
-    def client(self):
-        """創建測試客戶端"""
-        return TestClient(app)
+    def client(self, authed_client):
+        """創建測試客戶端（已登入）"""
+        return authed_client
 
     @pytest.fixture
     def sample_pdf_file(self):
@@ -267,6 +285,7 @@ class TestDocumentUploadAPI:
             'status': 'completed',
             'progress': 100,
             'message': '處理完成',
+            'owner_id': TEST_OWNER_ID,
             'results': {
                 'financial_data': {'revenue': {'value': 1000000}},
                 'validation_results': {'is_valid': True, 'warnings': [], 'errors': []},
@@ -302,7 +321,8 @@ class TestDocumentUploadAPI:
         processing_results[document_id] = {
             'status': 'completed',
             'progress': 100,
-            'message': '處理完成'
+            'message': '處理完成',
+            'owner_id': TEST_OWNER_ID
         }
         
         response = client.delete(f"/api/v1/documents/processing-result/{document_id}")
@@ -395,8 +415,8 @@ class TestDocumentUploadValidation:
     """文件上傳驗證測試"""
 
     @pytest.fixture
-    def client(self):
-        return TestClient(app)
+    def client(self, authed_client):
+        return authed_client
 
     def test_form_validation_company_id_pattern(self, client):
         """測試公司代碼格式驗證"""
@@ -413,8 +433,8 @@ class TestDocumentUploadIntegration:
     """文件上傳整合測試"""
 
     @pytest.fixture
-    def client(self):
-        return TestClient(app)
+    def client(self, authed_client):
+        return authed_client
 
     def test_full_upload_workflow_sync(self, client):
         """測試完整的同步上傳工作流程"""

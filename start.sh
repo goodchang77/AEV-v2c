@@ -1,8 +1,15 @@
 #!/bin/bash
-# 財務分析系統啟動腳本
-# Financial Analysis System Startup Script
+# 財務分析系統啟動腳本（本機開發用）
+# Financial Analysis System Startup Script (local development only)
+#
+# 環境變數：
+#   HOST  API 綁定位址（預設 127.0.0.1，只供本機存取；需要讓區網存取時才明確設 HOST=0.0.0.0）
+#   PORT  API 埠號（預設 8000）
 
 set -e
+
+HOST="${HOST:-127.0.0.1}"
+PORT="${PORT:-8000}"
 
 # 顏色定義
 RED='\033[0;31m'
@@ -26,6 +33,18 @@ log_error() {
 
 log_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
+}
+
+# Docker Compose：優先使用 v2 plugin（docker compose），退回 v1（docker-compose）
+compose() {
+    if docker compose version > /dev/null 2>&1; then
+        docker compose "$@"
+    elif command -v docker-compose > /dev/null 2>&1; then
+        docker-compose "$@"
+    else
+        log_error "找不到 docker compose（v2）或 docker-compose（v1），請先安裝 Docker Compose"
+        exit 1
+    fi
 }
 
 # 檢查必要檔案
@@ -88,28 +107,28 @@ start_databases() {
     
     # 啟動資料庫容器
     log_info "啟動 PostgreSQL, TimescaleDB, Redis..."
-    docker-compose -f docker-compose.dev.yml up -d postgres timescaledb redis
+    compose -f docker-compose.dev.yml up -d postgres timescaledb redis
     
     # 等待資料庫啟動
     log_info "等待資料庫服務啟動..."
     sleep 10
     
     # 檢查服務狀態
-    if docker-compose -f docker-compose.dev.yml ps postgres | grep -q "Up"; then
+    if compose -f docker-compose.dev.yml ps postgres | grep -q "Up"; then
         log_info "PostgreSQL 啟動成功"
     else
         log_error "PostgreSQL 啟動失敗"
         exit 1
     fi
     
-    if docker-compose -f docker-compose.dev.yml ps timescaledb | grep -q "Up"; then
+    if compose -f docker-compose.dev.yml ps timescaledb | grep -q "Up"; then
         log_info "TimescaleDB 啟動成功"
     else
         log_error "TimescaleDB 啟動失敗"
         exit 1
     fi
     
-    if docker-compose -f docker-compose.dev.yml ps redis | grep -q "Up"; then
+    if compose -f docker-compose.dev.yml ps redis | grep -q "Up"; then
         log_info "Redis 啟動成功"
     else
         log_error "Redis 啟動失敗"
@@ -120,9 +139,9 @@ start_databases() {
 # 啟動 pgAdmin
 start_pgadmin() {
     log_step "啟動 pgAdmin..."
-    docker-compose -f docker-compose.dev.yml up -d pgadmin
+    compose -f docker-compose.dev.yml up -d pgadmin
     
-    if docker-compose -f docker-compose.dev.yml ps pgadmin | grep -q "Up"; then
+    if compose -f docker-compose.dev.yml ps pgadmin | grep -q "Up"; then
         log_info "pgAdmin 啟動成功，訪問地址: http://localhost:5050"
         log_info "登入帳號: admin@financial.dev"
         log_info "登入密碼: admin123"
@@ -185,11 +204,14 @@ start_api() {
     export PYTHONPATH="${PYTHONPATH}:$(pwd)"
     
     # 啟動應用
-    log_info "啟動應用在 http://localhost:8000"
-    log_info "API 文檔: http://localhost:8000/docs"
-    log_info "健康檢查: http://localhost:8000/health"
+    if [ "$HOST" != "127.0.0.1" ] && [ "$HOST" != "localhost" ]; then
+        log_warn "API 綁定在 ${HOST}（非本機迴路），同網段其他機器可連線；開發模式請勿暴露到不可信網路"
+    fi
+    log_info "啟動應用在 http://${HOST}:${PORT}"
+    log_info "API 文檔: http://${HOST}:${PORT}/docs"
+    log_info "健康檢查: http://${HOST}:${PORT}/health"
     
-    uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    uvicorn src.main:app --host "$HOST" --port "$PORT" --reload
 }
 
 # 顯示使用說明
@@ -214,20 +236,20 @@ show_help() {
 # 停止服務
 stop_services() {
     log_step "停止服務..."
-    docker-compose -f docker-compose.dev.yml down
+    compose -f docker-compose.dev.yml down
     log_info "所有服務已停止"
 }
 
 # 查看服務狀態
 show_status() {
     log_step "服務狀態:"
-    docker-compose -f docker-compose.dev.yml ps
+    compose -f docker-compose.dev.yml ps
 }
 
 # 查看日誌
 show_logs() {
     log_step "查看服務日誌:"
-    docker-compose -f docker-compose.dev.yml logs -f
+    compose -f docker-compose.dev.yml logs -f
 }
 
 # 主要執行邏輯

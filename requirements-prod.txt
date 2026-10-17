@@ -1,6 +1,6 @@
 # Production-specific dependencies
-gunicorn>=21.2.0
-uvicorn[standard]>=0.24.0
+gunicorn>=26.2.0
+uvicorn[standard]>=0.54.0
 prometheus-client>=0.19.0
 structlog>=23.2.0
 python-json-logger>=2.0.7
@@ -9,10 +9,10 @@ newrelic>=9.2.0
 ddtrace>=2.3.0
 
 # Security
-python-jose[cryptography]>=3.3.0
+PyJWT>=2.15.1  # replaces python-jose
 passlib[bcrypt]>=1.7.4
 bcrypt==4.0.1  # passlib 1.7.4 與 bcrypt>=4.1/5.0 不相容
-python-multipart>=0.0.6
+python-multipart>=0.0.32
 
 # Database optimization
 asyncpg>=0.29.0
@@ -21,8 +21,8 @@ redis[hiredis]>=5.0.1
 sqlalchemy[asyncio]>=2.0.23
 
 # HTTP client optimization  
-aiohttp[speedups]>=3.9.0
-httpx>=0.25.2
+aiohttp[speedups]>=3.14.5
+httpx>=0.28.1
 
 # Caching and performance
 aiocache>=0.12.2

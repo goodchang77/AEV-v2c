@@ -12,17 +12,36 @@ import io
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 
+from types import SimpleNamespace
+
 from src.main import app
+from src.api.endpoints.auth import get_current_user
 from src.api.endpoints.document_upload import processing_results
+
+
+def _fake_current_user():
+    """上傳端點需要登入：以 dependency override 模擬已登入使用者"""
+    return SimpleNamespace(
+        user_id="00000000-0000-0000-0000-0000000000bb", is_active=True, role="user"
+    )
+
+
+@pytest.fixture
+def authed_client():
+    app.dependency_overrides[get_current_user] = _fake_current_user
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 class TestPDFProcessingE2E:
     """PDF處理端到端測試類"""
 
     @pytest.fixture
-    def client(self):
-        """創建測試客戶端"""
-        return TestClient(app)
+    def client(self, authed_client):
+        """創建測試客戶端（已登入）"""
+        return authed_client
 
     @pytest.fixture
     def realistic_pdf_content(self):

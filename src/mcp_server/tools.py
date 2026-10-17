@@ -480,7 +480,7 @@ class DocumentProcessorInput(BaseModel):
     
     document_data: str = Field(
         ...,
-        description="文件資料 (檔案路徑、URL或base64編碼)"
+        description="文件資料：base64 編碼內容，或伺服器上傳目錄內的相對檔名（不接受任意路徑）"
     )
     
     extraction_targets: List[str] = Field(
