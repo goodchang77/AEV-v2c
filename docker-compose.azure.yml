@@ -2,10 +2,12 @@
 # ==============================================
 # 只保留核心服務：API + PostgreSQL + Redis。
 # 監控(Prometheus/Grafana)與反向代理(Nginx/TLS)可視需求再加。
+# 安全：API 只綁 127.0.0.1:8000，須由 TLS 反向代理對外；PostgreSQL / Redis 不發布 port。
 #
 # 用法（在專案根目錄）:
 #   cp deploy/azure/.env.production.example deploy/azure/.env.production
-#   # 編輯 deploy/azure/.env.production 填入密碼與 key
+#   # 編輯 deploy/azure/.env.production 填入 SECRET_KEY / POSTGRES_PASSWORD / REDIS_PASSWORD /
+#   ALLOWED_HOSTS / ALLOWED_ORIGINS（缺任何一項 compose 會直接報錯，不會用弱預設值）
 #   docker compose -f docker-compose.azure.yml --env-file deploy/azure/.env.production up -d --build
 
 services:
@@ -18,14 +20,22 @@ services:
     container_name: financial-api
     restart: unless-stopped
     environment:
-      ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-financial_analysis}
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: ${SECRET_KEY:-}
+      # 設定類別由 ENVIRONMENT 選擇（src/core/config.py）；production 會強制 DEBUG=false，
+      # 且 SECRET_KEY 缺漏 / 過短 / 為預設值時拒絕啟動。
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?請在 deploy/azure/.env.production 設定 POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-financial_analysis}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?請在 deploy/azure/.env.production 設定 REDIS_PASSWORD}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?請在 deploy/azure/.env.production 設定 SECRET_KEY（openssl rand -hex 32）}
+      # 逗號分隔；容器內健康檢查用的 localhost/127.0.0.1 由應用程式自動允許
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?請在 deploy/azure/.env.production 設定 ALLOWED_HOSTS（例如 api.example.com）}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?請在 deploy/azure/.env.production 設定 ALLOWED_ORIGINS（例如 https://app.example.com）}
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    # 只綁 VM 本機迴路介面：對外請經由 TLS 反向代理（Nginx/Caddy/Application Gateway）
+    # 轉發到 127.0.0.1:8000，或用 SSH tunnel（ssh -L 8000:127.0.0.1:8000 ...）管理存取。
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,8 +58,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?請在 deploy/azure/.env.production 設定 POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # 首次初始化會自動套用建表 + 種子資料
-      - ./database/init:/docker-entrypoint-initdb.d:ro
+      # 首次初始化只套用「結構」SQL；刻意不掛載 02_sample_data.sql
+      # （內含啟用中的示範 admin/analyst 帳號與固定密碼雜湊，生產環境不得載入）。
+      # 建立管理員的安全方式見 deploy/azure/README.md。
+      - ./database/init/01_create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql:ro
+      - ./database/init/03_valuation_and_stock.sql:/docker-entrypoint-initdb.d/03_valuation_and_stock.sql:ro
+      - ./database/init/04_portfolio.sql:/docker-entrypoint-initdb.d/04_portfolio.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -60,11 +74,14 @@ services:
     image: redis:7-alpine
     container_name: financial-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?請在 deploy/azure/.env.production 設定 REDIS_PASSWORD}
+    # 不對外發布 port；僅 compose 內部網路可連，且需密碼
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 5
