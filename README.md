@@ -1,224 +1,133 @@
-# 財務分析與企業評價系統
+# AEV-v2c｜財務分析與企業評價系統
 
-基於 IFRS 13 公允價值衡量原則和台灣市場實務的企業級財務分析與評價系統。
+[![CI](https://github.com/goodchang77/AEV-v2c/actions/workflows/ci.yml/badge.svg)](https://github.com/goodchang77/AEV-v2c/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## 🚀 快速開始
+**AEV-v2c is an early-stage Python/FastAPI project for financial analysis and business valuation, focused on Taiwan-market workflows and Traditional Chinese users.** It includes valuation models, financial-ratio services, a browser workbench, tests, and deployment examples. Public adoption remains limited; no broad ecosystem adoption is claimed.
 
-### 1. 系統需求
+AEV-v2c 提供財務報表分析、企業評價及風險分析工具，主要面向台灣市場與繁體中文使用者。專案由 [Good Chang（goodchang77）](https://github.com/goodchang77) 維護，歡迎提出可重現的問題與小範圍改進。
 
-- **Docker & Docker Compose** (必要)
-- **Python 3.11+**
-- **Node.js 18+** (前端開發用)
-- **Git**
+> **專案狀態：早期開發。** 下列功能已有原始碼或測試，不代表所有外部資料來源、部署環境或完整使用流程均已驗證。模型輸出是研究與教學輔助，不是投資建議、會計師查核意見或 IFRS 13 合規認證。請自行核對資料、假設、幣別及單位。
 
-### 2. 環境設置
+## 已有實作與證據
+
+| 範圍 | 原始碼／測試 | 限制與注意事項 |
+| --- | --- | --- |
+| 財務比率計算 | [計算服務](src/services/financial_calculator.py)、[測試](tests/test_financial_calculator.py) | 結果取決於輸入資料與單位一致性 |
+| DCF、DDM、相對評價 | [評價模型](src/services/valuation_models.py)、[API](src/api/endpoints/valuation.py)、[測試](tests/test_valuation.py) | 不是經獨立驗證的專業估值報告 |
+| PEG 與蒙地卡羅 DCF | [模擬服務](src/services/monte_carlo.py)、[測試](tests/test_valuation.py) | 模擬依賴假設；機率不代表報酬保證 |
+| 同業與風險分析 | [同業服務](src/services/peer_analysis.py)、[風險服務](src/services/risk_assessment.py) | 需核對同業範圍、期間及資料品質 |
+| 文件處理與報告 | [PDF 處理](src/services/pdf_processor.py)、[報告服務](src/services/report_service.py) | 擷取結果需人工複核；勿將機密文件送至未核准服務 |
+| 瀏覽器工作區 | [靜態介面](src/static/index.html) | 與後端及資料來源整合狀態依環境而異 |
+| AI Agent 與 MCP | [Agent 端點](src/api/endpoints/agent.py)、[MCP server](src/mcp_server/server.py) | 實驗性整合，可能需要額外依賴、API 金鑰與費用 |
+| 自動化檢查 | [GitHub Actions](.github/workflows/ci.yml) | 最新實際結果請見 CI，不以歷史測試數量作保證 |
+
+## 本機開發
+
+### 環境需求
+
+- Python **3.11**（目前 CI 使用的版本）。
+- Docker 與 Docker Compose v2，用於隔離的本機 PostgreSQL／Redis。
+- Git；目前的靜態前端不需要 Node.js 建置步驟。
+- 額外的 OCR、AI 或市場資料服務，可能需要自行設定相應工具與金鑰。
+
+### 安裝與設定
 
 ```bash
-# 克隆專案
-git clone <repository-url>
+git clone https://github.com/goodchang77/AEV-v2c.git
 cd AEV-v2c
-
-# 啟動系統
-./start.sh
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
-### 3. 訪問系統
+Windows 可使用 `py -3.11 -m venv .venv`，並執行 `.venv\Scripts\Activate.ps1` 啟用環境。已有 `.env` 時不要覆寫。
 
-- **API 服務**: http://localhost:8000
-- **API 文檔**: http://localhost:8000/docs  
-- **健康檢查**: http://localhost:8000/health
-- **資料庫管理**: http://localhost:5050 (pgAdmin)
+**啟動前先編輯 `.env`：**
 
-### 4. 預設帳號
+- `DATABASE_URL`：必須與本機 PostgreSQL 的帳號、密碼、資料庫及連接埠一致。
+- `REDIS_URL`：須包含與 Compose 設定相符的 Redis 認證資訊。
+- `SECRET_KEY`：自行產生至少 32 字元的隨機值，例如 `python -c "import secrets; print(secrets.token_hex(32))"`。
+- 本機如需 API 文件，可設定 `DEBUG=true`；正式環境請關閉。
+- `.env`、正式環境金鑰及客戶資料不得提交至 Git。
 
-| 角色 | 帳號 | 密碼 |
-|------|------|------|
-| 系統管理員 | admin@financial-analysis.com | password |
-| 財務分析師 | analyst@financial-analysis.com | password |
-| 示範用戶 | demo@financial-analysis.com | password |
-
-## 📋 專案結構
-
-```
-AEV-v2c/
-├── src/                    # 應用程式原始碼
-│   ├── api/               # API 路由與端點
-│   ├── core/              # 核心功能 (設定、資料庫、日誌)
-│   ├── models/            # 資料模型
-│   ├── services/          # 業務邏輯服務
-│   └── utils/             # 工具函數
-├── database/              # 資料庫腳本
-│   ├── init/             # 初始化 SQL 腳本
-│   └── timescale_init/   # TimescaleDB 初始化腳本
-├── tests/                 # 測試程式
-├── docs/                  # 技術文檔
-└── docker-compose.dev.yml # 開發環境容器配置
-```
-
-## 🛠️ 開發指令
+### 啟動本機服務
 
 ```bash
-# 啟動完整系統
-./start.sh start
+# 僅供隔離的開發環境；先確認連接埠與現有服務不衝突
+docker compose -f docker-compose.dev.yml up -d postgres redis
 
-# 僅啟動資料庫
-./start.sh db
+# 在設定正確的本機測試資料庫初始化範例資料
+python scripts/init_db.py
 
-# 僅啟動 API 服務
-./start.sh api
-
-# 查看服務狀態
-./start.sh status
-
-# 查看服務日誌
-./start.sh logs
-
-# 停止所有服務
-./start.sh stop
-
-# 重新啟動
-./start.sh restart
+# 將 API 限制在本機介面
+uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-## 🏗️ 架構設計
+`docker-compose.dev.yml` 是開發範例，包含示範憑證及對主機發布的資料庫連接埠；**不得直接作為公開服務的正式設定**。請在受控開發環境使用，必要時先調整主機綁定位址與防火牆。
 
-### 技術棧
+- 工作區：`http://127.0.0.1:8000/static/index.html`
+- 健康檢查：`http://127.0.0.1:8000/health`
+- API 文件：`http://127.0.0.1:8000/docs`（僅 `DEBUG=true` 時提供）
+- [初始化程式](scripts/init_db.py) 內含示範財務數值，不應當作已查核的公司正式財報。
+- 資料庫管理與 TimescaleDB 是選用服務，請按實際需要啟動。
 
-- **後端框架**: FastAPI
-- **資料庫**: PostgreSQL + TimescaleDB
-- **快取**: Redis
-- **容器化**: Docker & Docker Compose
-- **API 文檔**: OpenAPI/Swagger
+舊版 [start.sh](start.sh) 仍可作參考，但它使用 `docker-compose` 執行檔，且 API 綁定 `0.0.0.0`；只有 `docker compose` 的環境需另作相容處理。本 README 的明確步驟優先，不宣稱跨平台一鍵安裝已驗證。
 
-### 資料庫設計
+## 測試與 CI
 
-#### 主要資料表
-
-1. **companies** - 公司基本資料
-2. **financial_statements** - 財務報表資料  
-3. **financial_ratios** - 財務比率計算結果
-4. **stock_prices** - 股價時序資料 (TimescaleDB)
-5. **users** - 用戶管理
-6. **user_watchlists** - 用戶追蹤清單
-
-### API 設計
-
-```
-/api/v1/
-├── /auth          # 認證相關
-├── /companies     # 公司資料
-├── /financials    # 財務報表  
-├── /ratios        # 財務比率
-└── /health        # 系統監控
-```
-
-## 📊 核心功能
-
-### 1. 財務報表分析
-- 資產負債表、損益表、現金流量表
-- 財務報表自動驗證與品質檢查
-- 多期間財務資料比較
-
-### 2. 財務比率計算
-- **償債能力**: 流動比率、速動比率、利息保障倍數
-- **獲利能力**: ROE、ROA、毛利率、淨利率
-- **經營效率**: 總資產週轉率、存貨週轉率
-- **財務結構**: 負債比率、權益比率
-
-### 3. 企業評價模型
-- **DCF 模型**: 自由現金流量折現
-- **相對評價**: PE、PB、EV/EBITDA
-- **股利評價**: DDM 股利折現模型
-
-### 4. 同業比較分析
-- 產業基準比較
-- 同業排名分析
-- 財務指標分位數分析
-
-### 5. 風險評估
-- Altman Z-Score 財務危機預警
-- 財務風險指標監控
-- 資料品質評分
-
-## 🧪 測試
+測試依賴已列在 [requirements.txt](requirements.txt)，沒有獨立的 `requirements-dev.txt`。
 
 ```bash
-# 安裝開發依賴
-pip install -r requirements-dev.txt
-
-# 運行單元測試
-pytest tests/
-
-# 測試覆蓋率
-pytest --cov=src tests/
-
-# 程式碼品質檢查
-black src/
-isort src/
-flake8 src/
+python scripts/import_smoke_test.py
+python -m pytest tests/ -q -W ignore
+python scripts/api_db_test.py
 ```
 
-## 📈 監控與日誌
+完整流程需要正確設定的測試用 PostgreSQL／Redis，部分測試涉及額外工具或可選整合。請勿將測試指向正式資料庫。
 
-### 健康檢查端點
-- `/health` - 基本健康狀態
-- `/health/detailed` - 詳細系統狀態
+[CI 設定](.github/workflows/ci.yml) 會在推送 `main` 或提出 PR 時執行依賴安裝、匯入檢查、資料庫初始化、pytest、資料庫端點整合檢查及 Docker 建置。請以[該次工作流程結果](https://github.com/goodchang77/AEV-v2c/actions)判讀，不將通過 CI 等同於安全稽核或財務模型正確性認證。
 
-### 日誌記錄
-- 結構化日誌 (JSON 格式)
-- 請求追蹤
-- 效能指標記錄
-- 錯誤監控
+## 專案結構
 
-## 🔒 安全性
+```text
+src/
+  api/endpoints/     # FastAPI 端點
+  core/              # 設定、資料庫、快取與日誌
+  services/          # 財務、評價、風險、報告等服務
+  ai_agent/          # AI 整合
+  mcp_server/        # MCP 整合
+  static/            # 瀏覽器工作區
+  models.py          # 資料模型
+scripts/             # 初始化與檢查程式
+tests/               # 自動化測試
+database/            # SQL 與示範資料
+deploy/azure/        # 選用的 Azure 部署範例
+```
 
-### 認證與授權
-- JWT Token 認證
-- 角色權限控制
-- API 請求限流
+## 後續維護方向
 
-### 資料安全
-- 資料庫連線加密
-- 輸入驗證與 SQL 注入防護
-- 敏感資料遮罩
+以下為待持續改善的方向，**不是已完成項目或交付承諾**：
 
-## 📝 開發計畫
+- 擴充估值邊界條件、財務資料驗證及回歸測試。
+- 改善安裝流程、文件一致性與可重現示範。
+- 強化依賴維護、部署安全與私密設定管理。
+- 驗證外部資料來源可用性、權利限制及資料品質。
+- 以真實使用回饋決定功能優先順序，不虛構使用者或下載量。
 
-查看詳細的開發計畫: [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
+[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) 等早期設計文件包含歷史規劃，不能當作目前全部功能均已完成的證據。
 
-### 當前階段: Sprint 1-2 (MVP 基礎架構)
+## 貢獻與安全
 
-✅ **已完成:**
-- [x] Docker 開發環境設置
-- [x] 核心資料表架構設計  
-- [x] FastAPI 基礎架構建立
-- [x] 台股前50大公司資料初始化
+- 請見 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 一般問題請透過 [Issues](https://github.com/goodchang77/AEV-v2c/issues) 提供去識別化的重現步驟。
+- 安全問題請依 [SECURITY.md](SECURITY.md) 私下回報；不要在公開 issue 張貼金鑰、客戶資料或可直接利用的細節。
+- 部署請先閱讀 [Azure 部署範例](deploy/azure/README.md) 與[公開交接檢查清單](NEW_PROJECT_HANDOVER.md)，自行預覽成本與設定；本機開發不需要 Azure。
 
-🔄 **進行中:**
-- [ ] 財務比率計算引擎
-- [ ] DCF 評價模型基礎版本
-- [ ] 資料驗證與清洗模組
-- [ ] 基礎 API 端點實作
+## 授權與聯絡
 
-## 🤝 貢獻指南
+本專案原創程式碼採 [MIT License](LICENSE)。第三方依賴、商標、外部市場資料及第三方財報／PDF 等內容仍受其各自條款與權利限制；本授權不授予對第三方資料的額外權利。
 
-1. Fork 專案
-2. 創建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交變更 (`git commit -m 'Add amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing-feature`)
-5. 開啟 Pull Request
-
-## 📄 授權
-
-本專案採用 MIT 授權 - 詳見 [LICENSE](LICENSE) 檔案
-
-## 📞 聯絡資訊
-
-- **專案負責人**: Good Chang
-- **Email**: goodchang77@gmail.com
-- **技術文檔**:
-
----
-
-*基於現代軟體工程最佳實務與 IFRS 13 準則開發*# AEV-v2c
-# AEV-v2c
+- 維護者：[Good Chang](https://github.com/goodchang77)
+- Email：goodchang77@gmail.com
