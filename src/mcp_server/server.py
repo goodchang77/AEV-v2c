@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 import json
 import time
+import uuid
 from contextlib import asynccontextmanager
 
 from sqlalchemy.orm import Session
@@ -46,6 +47,58 @@ from src.services.report_service import ReportService
 from src.services.pdf_processor import FinancialPDFProcessor
 from src.services.alert_monitor import AlertMonitor
 from src.core.database import get_sync_session as get_db
+from src.core.config import get_settings
+
+
+# 文件處理工具僅能讀取上傳目錄內、符合條件的檔案
+ALLOWED_DOCUMENT_EXTENSIONS = frozenset({".pdf"})
+_DOCUMENT_ACCESS_DENIED = "document path not allowed"
+
+
+class DocumentAccessError(ValueError):
+    """文件路徑不被允許（訊息刻意不揭露檔案是否存在或實際路徑）"""
+
+
+def read_upload_document(
+    path_str: str,
+    upload_root: str,
+    max_size: int,
+    allowed_extensions=ALLOWED_DOCUMENT_EXTENSIONS,
+) -> bytes:
+    """
+    安全讀取上傳目錄內的文件。
+
+    - 相對路徑以 upload_root 為基準；絕對路徑同樣必須位於 upload_root 內
+    - resolve() 後（會跟隨 symlink）必須仍在 upload_root 內，阻擋 '..' 與外指 symlink
+    - 必須為一般檔案、副檔名在白名單、大小不超過 max_size
+    任一條件不符即拋出 DocumentAccessError，且不讀取檔案內容。
+    """
+    if not isinstance(path_str, str) or not path_str or "\x00" in path_str:
+        raise DocumentAccessError(_DOCUMENT_ACCESS_DENIED)
+
+    root = Path(upload_root).resolve()
+    raw = Path(path_str)
+    candidate = raw if raw.is_absolute() else root / raw
+    try:
+        resolved = candidate.resolve(strict=True)
+    except (OSError, RuntimeError):
+        raise DocumentAccessError(_DOCUMENT_ACCESS_DENIED)
+
+    if resolved == root or not resolved.is_relative_to(root):
+        raise DocumentAccessError(_DOCUMENT_ACCESS_DENIED)
+    if not resolved.is_file():
+        raise DocumentAccessError(_DOCUMENT_ACCESS_DENIED)
+    if resolved.suffix.lower() not in allowed_extensions:
+        raise DocumentAccessError("document type not allowed")
+    if resolved.stat().st_size > max_size:
+        raise DocumentAccessError("document too large")
+
+    # 讀取時再次限制長度，避免檢查後檔案被替換變大
+    with open(resolved, "rb") as fh:
+        content = fh.read(max_size + 1)
+    if len(content) > max_size:
+        raise DocumentAccessError("document too large")
+    return content
 
 
 # ============================================================================
@@ -74,8 +127,13 @@ class MCPServer:
         self,
         db_session: Session,
         cache_enabled: bool = True,
-        max_concurrent_tools: int = 5
+        max_concurrent_tools: int = 5,
+        upload_root: Optional[str] = None,
+        max_document_size: Optional[int] = None
     ):
+        settings = get_settings()
+        self.upload_root = upload_root or settings.UPLOAD_PATH
+        self.max_document_size = max_document_size or settings.MAX_UPLOAD_SIZE
         self.db = db_session
         self.cache_enabled = cache_enabled
         self.max_concurrent_tools = max_concurrent_tools
@@ -213,16 +271,23 @@ class MCPServer:
             )
             
         except Exception as e:
+            error_id = uuid.uuid4().hex[:12]
             logger.error(
                 "Tool execution failed",
                 tool_name=tool_name,
+                error_id=error_id,
                 error=str(e),
                 exc_info=True
             )
+            # 工具結果會回傳給 LLM 與使用者：只揭露已知安全的訊息
+            if isinstance(e, DocumentAccessError):
+                public_error = f"Tool execution failed: {e}"
+            else:
+                public_error = f"Tool execution failed (error_id={error_id})"
             return ToolResponse(
                 success=False,
-                error=f"Tool execution failed: {str(e)}",
-                metadata={"tool_name": tool_name}
+                error=public_error,
+                metadata={"tool_name": tool_name, "error_id": error_id}
             )
     
     async def execute_multiple_tools(
@@ -403,9 +468,18 @@ class MCPServer:
         """執行文件處理（對齊 FinancialPDFProcessor）"""
         processor = FinancialPDFProcessor()
         if input_data.document_source == "file_path":
-            content = Path(input_data.document_data).read_bytes()
+            content = read_upload_document(
+                input_data.document_data,
+                upload_root=self.upload_root,
+                max_size=self.max_document_size,
+            )
         elif input_data.document_source == "base64":
-            content = base64.b64decode(input_data.document_data)
+            # 解碼前先估算大小，避免超大 payload
+            if len(input_data.document_data) * 3 // 4 > self.max_document_size:
+                raise DocumentAccessError("document too large")
+            content = base64.b64decode(input_data.document_data, validate=True)
+            if len(content) > self.max_document_size:
+                raise DocumentAccessError("document too large")
         else:
             raise ValueError("document_source 僅支援 file_path/base64")
         return await processor.process_pdf(content, "document.pdf")
