@@ -58,7 +58,8 @@ COPY config/ ./config/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 COPY main.py ./
-COPY .env* ./
+# 安全：不把任何 .env* 打包進映像檔；機敏設定只在執行期由
+# docker compose env_file / environment 或平台密鑰管理注入。
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs /app/uploads /app/temp && \
