@@ -15,6 +15,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# 解析上限：避免惡意或超大活頁簿耗盡 CPU / 記憶體
+MAX_EXCEL_SHEETS = 50
+MAX_EXCEL_ROWS_PER_SHEET = 100_000
+
 
 class FinancialExcelProcessor:
     """財務報表 Excel 處理器"""
@@ -115,7 +119,18 @@ class FinancialExcelProcessor:
             # 嘗試讀取所有工作表
             try:
                 # 使用 pandas 讀取，header=None 因為我們不知道標題在哪一行
-                dfs = pd.read_excel(excel_file, sheet_name=None, header=None)
+                sheet_names_all = pd.ExcelFile(excel_file).sheet_names
+            except Exception as e:
+                logger.error(f"Pandas ExcelFile failed: {e}")
+                raise ValueError(f"無法讀取 Excel 文件: {e}")
+            if len(sheet_names_all) > MAX_EXCEL_SHEETS:
+                raise ValueError(f"工作表數量超過上限（最多 {MAX_EXCEL_SHEETS} 個）")
+            excel_file.seek(0)
+            try:
+                dfs = pd.read_excel(
+                    excel_file, sheet_name=None, header=None,
+                    nrows=MAX_EXCEL_ROWS_PER_SHEET
+                )
             except Exception as e:
                 logger.error(f"Pandas read_excel failed: {e}")
                 raise ValueError(f"無法讀取 Excel 文件: {e}")

@@ -17,6 +17,7 @@ from src.core.config import get_settings
 from src.core.database import engine, create_tables
 from src.core.logging import setup_logging
 from src.api.routes import api_router
+from src.api.endpoints.document_upload import DocumentBodySizeLimitMiddleware
 from src.core.exceptions import FinancialAnalysisException
 
 
@@ -80,6 +81,12 @@ if settings.ALLOWED_HOSTS:
         TrustedHostMiddleware,
         allowed_hosts=settings.ALLOWED_HOSTS
     )
+
+# 文件上傳 request body 大小限制（在解析 multipart 之前拒絕超大請求）
+app.add_middleware(
+    DocumentBodySizeLimitMiddleware,
+    path_prefix=f"/api/{settings.API_VERSION}/documents"
+)
 
 
 @app.middleware("http")

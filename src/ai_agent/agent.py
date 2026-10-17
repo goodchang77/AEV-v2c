@@ -12,7 +12,9 @@ AI Agent 協調層 (Financial Analyst Agent)
 """
 
 import asyncio
+import hashlib
 import json
+import uuid
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from enum import Enum
@@ -24,6 +26,20 @@ from src.mcp_server.server import MCPServer, ToolResponse
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+# 單次分析最多執行的工具步數（工具清單來自 LLM 規劃，需設上限）
+MAX_AGENT_TOOL_STEPS = 8
+
+
+def new_task_id() -> str:
+    """產生不可預測且不會碰撞的任務 ID"""
+    return uuid.uuid4().hex
+
+
+def _query_fingerprint(user_query: str) -> Dict[str, Any]:
+    """日誌只記錄問題長度與雜湊前綴，不記錄原文"""
+    digest = hashlib.sha256((user_query or "").encode("utf-8")).hexdigest()
+    return {"query_length": len(user_query or ""), "query_sha256": digest[:12]}
 
 
 # ============================================================================
@@ -196,13 +212,13 @@ class FinancialAnalystAgent:
         Returns:
             Dict: 包含分析結果、工具調用記錄、AI回應等
         """
-        task_id = f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        task_id = new_task_id()
         
         logger.info(
             "Analysis started",
             task_id=task_id,
-            user_query=user_query,
-            company_id=company_id
+            company_id=company_id,
+            **_query_fingerprint(user_query)
         )
         
         # 初始化Agent狀態
@@ -216,6 +232,19 @@ class FinancialAnalystAgent:
         
         # 第一步: 規劃任務
         plan = await self._plan_task(user_query, company_id, context, state)
+        tools = plan.get("tools") if isinstance(plan.get("tools"), list) else []
+        if len(tools) > MAX_AGENT_TOOL_STEPS:
+            logger.warning(
+                "Plan truncated to max tool steps",
+                task_id=task_id,
+                planned_steps=len(tools),
+                max_steps=MAX_AGENT_TOOL_STEPS
+            )
+            tools = tools[:MAX_AGENT_TOOL_STEPS]
+        plan["tools"] = tools
+        if not isinstance(plan.get("tool_inputs"), dict):
+            plan["tool_inputs"] = {}
+        plan.setdefault("reasoning", "")
         state.tools_to_execute = plan["tools"]
         state.total_steps = len(plan["tools"])
         state.intermediate_thoughts.append(plan["reasoning"])
@@ -223,8 +252,7 @@ class FinancialAnalystAgent:
         logger.info(
             "Task planned",
             task_id=task_id,
-            tools_to_execute=plan["tools"],
-            reasoning=plan["reasoning"]
+            tools_to_execute=plan["tools"]
         )
         
         # 第二步: 執行工具
@@ -369,7 +397,7 @@ class FinancialAnalystAgent:
             
             return plan
         except json.JSONDecodeError as e:
-            logger.error("Failed to parse plan JSON", error=str(e), response=response_text)
+            logger.error("Failed to parse plan JSON", error=str(e), response_length=len(response_text))
             
             # 回退計畫: 基於任務類型的預設工具
             return self._get_default_plan(state.task_type, company_id)
