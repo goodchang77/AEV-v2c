@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 COPY main.py ./
-COPY .env* ./
+# 安全：不把任何 .env* 打包進映像檔；設定只在執行期注入。
 
 # Create app user
 RUN useradd -m -u 1000 appuser && \

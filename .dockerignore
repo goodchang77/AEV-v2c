@@ -1,0 +1,54 @@
+# Docker build context 排除清單（安全：避免機敏檔與大型產物進入映像檔/建置快取）
+# Dockerfile 只 COPY: requirements*.txt, src/, scripts/, database/, config/,
+# alembic/, alembic.ini, main.py — 以下排除項目皆非執行期所需。
+
+# VCS / 工具
+.git
+.gitignore
+.github
+.claude/
+.dsh/
+.vscode/
+.idea/
+
+# 環境變數與密鑰（執行期注入，絕不進映像檔）
+.env
+.env.*
+**/.env
+**/.env.*
+*.pem
+*.key
+
+# Terraform 狀態 / 變數 / 計畫
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+tfplan
+**/tfplan
+*.tfplan
+**/.terraform
+deploy/
+
+# 資料庫備份與執行期資料
+backups/
+*.sql.gz
+*.dump
+uploads/
+logs/
+temp/
+*.log
+
+# Python 環境與快取
+venv/
+.venv/
+env/
+**/__pycache__
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/

@@ -7,6 +7,21 @@
 .git
 .gitignore
 
+# 環境變數與密鑰（絕不上傳；範本除外）
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+*.pem
+*.key
+*.tfvars
+*.tfvars.json
+backups/
+*.sql.gz
+*.dump
+uploads/
+
 # Python
 __pycache__/
 *.py[cod]

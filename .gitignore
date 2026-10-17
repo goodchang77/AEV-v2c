@@ -8,9 +8,12 @@ __pycache__/
 
 # 環境變數與密鑰 (Security Risk - Critical!)
 .env
-.env.local
-.env.production
-.env.sample
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+!**/.env.production.example
 *.pem
 *.key
 
@@ -24,7 +27,16 @@ Alpha Vantage_api key.txt
 deploy/gcp/terraform/tfplan
 .terraform/
 *.tfvars
+*.tfvars.json
 !*.tfvars.example
+**/tfplan
+*.tfplan
+
+# 資料庫備份 / 傾印與使用者上傳檔（含真實資料，勿提交）
+backups/
+*.sql.gz
+*.dump
+uploads/
 
 # Kubernetes Secret（實際部署用 secret.example.yaml + 外部密鑰管理）
 deploy/kubernetes/base/secret.yaml
