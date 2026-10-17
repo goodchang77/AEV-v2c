@@ -26,7 +26,7 @@ email-validator==2.1.0
 
 # HTTP 客戶端
 httpx==0.25.2
-aiohttp==3.9.1
+aiohttp==3.14.3
 brotli==1.1.0
 
 # Yahoo Finance API

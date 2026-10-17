@@ -21,7 +21,7 @@ redis[hiredis]>=5.0.1
 sqlalchemy[asyncio]>=2.0.23
 
 # HTTP client optimization  
-aiohttp[speedups]>=3.9.0
+aiohttp[speedups]>=3.14.3
 httpx>=0.25.2
 
 # Caching and performance
