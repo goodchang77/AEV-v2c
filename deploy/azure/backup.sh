@@ -6,24 +6,40 @@
 #   BACKUP_DIR      備份目錄（預設 ~/backups）
 #   RETENTION_DAYS  保留天數（預設 14）
 set -euo pipefail
+# 備份檔含完整資料庫內容：只允許擁有者讀寫
+umask 077
 
 BACKUP_DIR="${BACKUP_DIR:-$HOME/backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-financial_analysis}"
 
+# 本腳本位於 <repo>/deploy/azure/，專案根目錄是上兩層
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.azure.yml"
+ENV_FILE="$PROJECT_ROOT/deploy/azure/.env.production"
+
+[ -f "$COMPOSE_FILE" ] || { echo "❌ 找不到 $COMPOSE_FILE" >&2; exit 1; }
+[ -f "$ENV_FILE" ] || { echo "❌ 找不到 $ENV_FILE" >&2; exit 1; }
 
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 TS=$(date +%Y%m%d_%H%M%S)
 OUT="$BACKUP_DIR/aev_backup_${TS}.sql.gz"
+TMP="$(mktemp "$BACKUP_DIR/.aev_backup_${TS}.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
 
 echo "==> 備份 $POSTGRES_DB 到 $OUT"
 cd "$PROJECT_ROOT"
-docker compose -f docker-compose.azure.yml --env-file deploy/azure/.env.production \
+# 先寫入暫存檔；pg_dump 或 gzip 任一失敗（pipefail）就中止，不會留下不完整的正式備份檔
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
   exec -T postgres pg_dump -U "$POSTGRES_USER" --clean --if-exists "$POSTGRES_DB" \
-  | gzip > "$OUT"
+  | gzip > "$TMP"
+
+gzip -t "$TMP"
+mv -f "$TMP" "$OUT"
+trap - EXIT
 
 echo "✅ 備份完成: $OUT ($(du -h "$OUT" | cut -f1))"
 
