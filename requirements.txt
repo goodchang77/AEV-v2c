@@ -83,4 +83,4 @@ mkdocs-material==9.7.7
 
 # AI Agent + MCP Server 依賴
 anthropic>=0.18.0
-slowapi>=0.1.9  # API速率限制 (額外需求)
+slowapi>=0.1.10  # API速率限制 (額外需求)
