@@ -88,18 +88,24 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise credentials_exc
     except JWTError:
         raise credentials_exc
 
+    # sub 必須是合法 UUID 字串；缺漏或格式錯誤一律視為無效憑證（不查 DB）
+    user_id = payload.get("sub") if isinstance(payload, dict) else None
+    if not isinstance(user_id, str):
+        raise credentials_exc
     try:
-        user = db.query(User).filter(User.user_id == uuid.UUID(user_id)).first()
-    except (ValueError, AttributeError):
-        user = None
+        user_uuid = uuid.UUID(user_id)
+    except (ValueError, AttributeError, TypeError):
+        raise credentials_exc
+
+    user = db.query(User).filter(User.user_id == user_uuid).first()
     if user is None:
         raise credentials_exc
+    # 已停用帳號即使持有未過期 token 也不得存取
+    if not getattr(user, "is_active", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="帳戶已停用")
     return user
 
 
