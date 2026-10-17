@@ -30,7 +30,7 @@ orjson>=3.9.10
 ujson>=5.8.0
 
 # Process management
-supervisor>=4.2.5
+supervisor>=4.3.0
 celery[redis]>=5.3.4
 
 # Backup and storage
