@@ -68,7 +68,7 @@ openpyxl==3.1.2
 xlrd==2.0.1
 
 # PDF 處理
-pypdf==6.21.0  # replaces PyPDF2 (unmaintained, unpatched advisory)
+pypdf==6.21.2  # replaces PyPDF2 (unmaintained, unpatched advisory)
 pdfplumber==0.11.10
 pymupdf==1.23.8
 pytesseract==0.3.10
