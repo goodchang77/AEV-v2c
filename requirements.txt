@@ -8,7 +8,7 @@ gunicorn==26.2.0
 sqlalchemy==2.0.23
 alembic==1.13.1
 asyncpg==0.29.0  # PostgreSQL async driver
-psycopg2-binary==2.9.9  # PostgreSQL sync driver
+psycopg2-binary==2.9.13  # PostgreSQL sync driver
 
 # Redis 快取
 redis==5.0.1
@@ -22,13 +22,13 @@ python-multipart==0.0.32
 
 # 資料驗證與序列化
 pydantic==2.14.1
-pydantic-settings==2.16.0
+pydantic-settings==2.16.2
 email-validator==2.3.0
 
 # HTTP 客戶端
 httpx==0.28.1
 aiohttp==3.14.5
-brotli==1.2.0
+brotli==1.2.1
 
 # Yahoo Finance API
 yfinance==0.2.28
@@ -46,7 +46,7 @@ pytz==2023.3
 
 # 測試框架
 pytest==9.1.1
-pytest-asyncio==1.4.0
+pytest-asyncio==1.4.1
 pytest-cov==7.1.0
 
 # 開發工具
@@ -64,14 +64,14 @@ python-json-logger==2.0.7
 python-dotenv==1.2.4
 
 # Excel/CSV 處理
-openpyxl==3.1.2
-xlrd==2.0.1
+openpyxl==3.1.5
+xlrd==2.0.2
 
 # PDF 處理
-pypdf==6.21.0  # replaces PyPDF2 (unmaintained, unpatched advisory)
+pypdf==6.21.4  # replaces PyPDF2 (unmaintained, unpatched advisory)
 pdfplumber==0.11.10
 pymupdf==1.23.8
-pytesseract==0.3.10
+pytesseract==0.3.13
 
 # 排程任務
 celery==5.3.4
