@@ -2,8 +2,8 @@
 fastapi==0.143.3
 starlette==1.8.0
 uvicorn[standard]==0.54.0
-pydantic==2.14.1
-pydantic-settings==2.16.0
+pydantic==2.14.2
+pydantic-settings==2.16.2
 sqlalchemy==2.0.23
 asyncpg==0.29.0
 redis==5.0.1
